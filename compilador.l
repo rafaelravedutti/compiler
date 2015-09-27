@@ -16,7 +16,7 @@
 #ifdef DEBUG
 #  define process_token(sym,ret)      \
     _process_token(sym);              \
-    fprintf(stdout, #sym " ");            \
+    fprintf(stdout, #sym " ");        \
     return ret
 #else
 #  define process_token(sym,ret)      \
