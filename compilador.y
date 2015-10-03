@@ -5,8 +5,6 @@
 #include <string.h>
 #include "compilador.h"
 
-int num_vars;
-
 %}
 
 %token PROGRAM PARENTHESES_OPEN PARENTHESES_CLOSE 
@@ -16,11 +14,11 @@ int num_vars;
 %%
 
 programa :  
-  { geraCodigo (NULL, "INPP"); }
+  { generate_code(NULL, "INPP"); }
   PROGRAM IDENT 
   PARENTHESES_OPEN lista_idents PARENTHESES_CLOSE SEMICOLON
   bloco DOT
-  { geraCodigo (NULL, "PARA"); }
+  { generate_code(NULL, "PARA"); }
 ;
 
 bloco :

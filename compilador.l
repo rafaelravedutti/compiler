@@ -1,8 +1,8 @@
 %{
 
 
-#include<stdio.h>
-#include<string.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "compilador.h"
 #include "compilador.tab.h"
@@ -11,7 +11,7 @@
 
 #define _process_token(sym)           \
   symbol = sym;                       \
-  strncpy(token, yytext, TAM_TOKEN)
+  strncpy(token, yytext, MAX_TOKEN)
 
 #ifdef DEBUG
 #  define process_token(sym,ret)      \
@@ -24,6 +24,8 @@
     return ret
 #endif
 
+unsigned int lexical_level = 0;
+unsigned int var_offset = 0;
 unsigned int line_number = 1;  
 
 %}
