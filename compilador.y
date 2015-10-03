@@ -9,45 +9,37 @@
 
 %token PROGRAM PARENTHESES_OPEN PARENTHESES_CLOSE 
 %token COMMA SEMICOLON COLON DOT
-%token T_BEGIN T_END VAR IDENT SET
+%token T_BEGIN T_END WHILE VAR IDENT SET
 
 %%
 
-programa :  
+program :  
   { generate_code(NULL, "INPP"); }
-  PROGRAM IDENT 
-  PARENTHESES_OPEN lista_idents PARENTHESES_CLOSE SEMICOLON
-  bloco DOT
+  PROGRAM IDENT PARENTHESES_OPEN lista_idents PARENTHESES_CLOSE SEMICOLON block DOT
   { generate_code(NULL, "PARA"); }
 ;
 
-bloco :
-  parte_declara_vars
+block :
+  variable_declaration_part
   { }
   comando_composto 
 ;
 
-
-
-
-parte_declara_vars:
-  var 
-;
-
-var :
+variable_declaration_part :
   { }
-  VAR declara_vars |
+  VAR declare_vars_block |
 ;
 
-declara_vars :
-  declara_vars declara_var | declara_var 
+declare_vars_block :
+  declare_vars_block declare_vars_line |
+  declare_vars_line
 ;
 
-declara_var :
-  { } 
-  lista_id_var COLON
+declare_vars_line :
+  { declared_variables = 0; }
+  variable_list COLON
   tipo 
-  { /* AMEM */ }
+  { generate_code(NULL, "AMEM %d", declared_variables); }
   SEMICOLON
 ;
 
@@ -55,8 +47,9 @@ tipo :
   IDENT
 ;
 
-lista_id_var :
-  lista_id_var COMMA IDENT { /* insere última vars na tabela de símbolos */ } | IDENT { /* insere vars na tabela de símbolos */}
+variable_list :
+  variable_list COMMA IDENT { create_symbol(token, sym_type_var), ++declared_variables; } | 
+  IDENT { create_symbol(token, sym_type_var), ++declared_variables; }
 ;
 
 lista_idents :
@@ -82,14 +75,15 @@ int main (int argc, const char *argv[]) {
     return -1;
   }
 
-  fp = fopen(argv[1], "r");
-  if(fp == NULL) {
+  if((fp = fopen(argv[1], "r")) == NULL) {
     fprintf(stdout, "Ocorreu um erro ao abrir o arquivo!\n");
     return(-1);
   }
 
   yyin = fp;
   yyparse();
+
+  free_symbols();
   return 0;
 }
 

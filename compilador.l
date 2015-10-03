@@ -1,6 +1,5 @@
 %{
 
-
 #include <stdio.h>
 #include <string.h>
 
@@ -27,6 +26,7 @@
 unsigned int lexical_level = 0;
 unsigned int var_offset = 0;
 unsigned int line_number = 1;  
+unsigned int declared_variables = 0;
 
 %}
 
@@ -58,6 +58,10 @@ begin {
 
 end {
   process_token(sym_end, T_END);
+}
+
+while {
+  process_token(sym_while, WHILE);
 }
 
 := {
