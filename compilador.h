@@ -5,8 +5,11 @@
 #define MAX_SYMBOL_REF    32
 
 typedef enum { 
-  sym_program, sym_var, sym_begin, sym_end, sym_while, 
-  sym_identifier, sym_number,
+  sym_program, sym_var, sym_begin, sym_end, sym_while,
+  sym_for, sym_to, sym_downto, sym_if, sym_then,
+  sym_else, sym_procedure, sym_function, sym_repeat,
+  sym_until, sym_goto, sym_label, sym_not, sym_case,
+  sym_in, sym_identifier, sym_number,
   sym_dot, sym_comma, sym_semicolon, sym_colon,
   sym_set, sym_parentheses_open, sym_parentheses_close,
 } symbol_name;
