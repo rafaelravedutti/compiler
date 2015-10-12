@@ -9,62 +9,95 @@
 
 %token PROGRAM PARENTHESES_OPEN PARENTHESES_CLOSE 
 %token COMMA SEMICOLON COLON DOT VAR IDENT SET
-%token T_BEGIN T_END WHILE FOR TO DOWNTO IF THEN ELSE
+%token T_BEGIN T_END WHILE DO FOR TO DOWNTO IF THEN ELSE
 %token PROCEDURE FUNCTION REPEAT UNTIL GOTO LABEL NOT
-%token CASE IN
+%token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
+%token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
 
 %%
 
 program :  
   { generate_code(NULL, "INPP"); }
-  PROGRAM IDENT PARENTHESES_OPEN lista_idents PARENTHESES_CLOSE SEMICOLON block DOT
+  PROGRAM IDENT PARENTHESES_OPEN ident_list PARENTHESES_CLOSE SEMICOLON block DOT
   { generate_code(NULL, "PARA"); }
 ;
 
 block :
   variable_declaration_part
-  { }
-  comando_composto 
+  composed_instructions
+  { generate_code(NULL, "DMEM %d", block_variables);
+    free_level_symbols(); } 
 ;
 
+/* Declaração de variáveis */
 variable_declaration_part :
-  { }
-  VAR declare_vars_block |
+  { block_variables = 0; }
+  VAR declare_vars_block
+  | /* OR */
+  /* Nothing */
 ;
 
 declare_vars_block :
-  declare_vars_block declare_vars_line |
+  declare_vars_block declare_vars_line
+  | /* OR */
   declare_vars_line
 ;
 
 declare_vars_line :
-  { declared_variables = 0; }
-  variable_list COLON
-  tipo 
-  { generate_code(NULL, "AMEM %d", declared_variables); }
-  SEMICOLON
+  { line_variables = 0; } variable_list COLON type 
+  { generate_code(NULL, "AMEM %d", line_variables); } SEMICOLON
 ;
 
-tipo :
+type :
   IDENT
 ;
 
 variable_list :
-  variable_list COMMA IDENT { create_symbol(token, sym_type_var), ++declared_variables; } | 
-  IDENT { create_symbol(token, sym_type_var), ++declared_variables; }
+  variable_list COMMA
+  IDENT { create_symbol(token, sym_type_var), ++line_variables; }
+  | /* OR */
+  IDENT { create_symbol(token, sym_type_var), ++line_variables; }
 ;
 
-lista_idents :
-  lista_idents COMMA IDENT | IDENT
+ident_list :
+  ident_list COMMA IDENT
+  | /* OR */ 
+  IDENT
 ;
 
-
-comando_composto:
-  T_BEGIN comandos T_END 
-
-comandos:    
+/* Comandos */
+composed_instructions :
+  T_BEGIN instructions T_END 
 ;
 
+instructions :
+  instruction SEMICOLON instructions
+  | /* OR */
+  /* Nothing */
+; 
+
+instruction :
+  IDENT { ident_ref = get_symbol_ref(token); } SET 
+  expression { generate_code(NULL, "ARMZ %s", ident_ref); }
+  | /* OR */
+  WHILE expression DO composed_instructions
+  | /* OR */
+  IF expression THEN composed_instructions
+  | /* OR */
+  FUNCTION IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE
+  | /* OR */
+  PROCEDURE IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE 
+  | /* OR */
+  IDENT { ident_ref = get_symbol_ref(token); }
+  PARENTHESES_OPEN ident_list PARENTHESES_CLOSE
+;
+
+expression :
+  IDENT { generate_code(NULL, "CRVL %s", get_symbol_ref(token)); }
+  | /* OR */
+  CONSTANT { generate_code(NULL, "CRCT %s", token); }
+  | /* OR */
+;
 
 %%
 

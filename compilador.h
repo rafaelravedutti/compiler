@@ -6,12 +6,14 @@
 
 typedef enum { 
   sym_program, sym_var, sym_begin, sym_end, sym_while,
-  sym_for, sym_to, sym_downto, sym_if, sym_then,
+  sym_do, sym_for, sym_to, sym_downto, sym_if, sym_then,
   sym_else, sym_procedure, sym_function, sym_repeat,
   sym_until, sym_goto, sym_label, sym_not, sym_case,
   sym_in, sym_identifier, sym_number,
   sym_dot, sym_comma, sym_semicolon, sym_colon,
   sym_set, sym_parentheses_open, sym_parentheses_close,
+  sym_equal, sym_diff, sym_less_than, sym_higher_than,
+  sym_less_or_equal_than, sym_higher_or_equal_than
 } symbol_name;
 
 typedef enum {
@@ -30,13 +32,14 @@ struct symbol_table {
 
 /* Variáveis globais */
 char token[MAX_TOKEN];
+char *ident_ref;
 symbol_name symbol, relation;
+unsigned int block_variables;
+unsigned int line_variables;
 
 /* Variáveis externas */
 extern unsigned int lexical_level;
-extern unsigned int var_offset;
 extern unsigned int line_number;
-extern unsigned int declared_variables;
 
 /* Funções de entrada e saída do compilador */
 void generate_code(const char *label, const char *code, ...);
@@ -44,6 +47,6 @@ void print_error(const char *error, ...);
 
 /* Funções da tabela de símbolos */
 void create_symbol(const char *name, symbol_type type);
-const char *get_symbol_ref(const char *name);
+char *get_symbol_ref(const char *name);
 void free_level_symbols();
 void free_symbols();

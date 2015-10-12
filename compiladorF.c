@@ -44,7 +44,7 @@ void create_symbol(const char *name, symbol_type type) {
   sym->sym_name = strdup(name);
   sym->sym_type = type;
   sym->sym_lex_level = lexical_level;
-  sym->sym_offset = var_offset;
+  sym->sym_offset = block_variables;
 
   if(sym == NULL || sym->sym_name == NULL) {
     if(sym != NULL) {
@@ -57,25 +57,27 @@ void create_symbol(const char *name, symbol_type type) {
 
   if(sym_tb_base != NULL) {
     sym_tb_base->sym_next = sym;
+  } else {
+    sym_tb_base = sym;
   }
 
-  sym_tb_base = sym;
+  ++block_variables;
 }
 
-const char *get_symbol_ref(const char *name) {
+char *get_symbol_ref(const char *name) {
   static char ref[MAX_SYMBOL_REF];
   struct symbol_table *sym;
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
     if(strcmp(sym->sym_name, name) == 0) {
       if(sym->sym_type == sym_type_var) {
-        snprintf(ref, sizeof ref, "%d,%d", sym->sym_lex_level, sym->sym_offset);
+        snprintf(ref, sizeof ref, "%d %d", sym->sym_lex_level, sym->sym_offset);
         return ref;
       }
     }
   }
 
-  print_error("Símbolo indefinido: \"%s\".\n", name);
+  print_error("Simbolo indefinido: \"%s\".\n", name);
 
   /* Nunca executado */
   snprintf(ref, sizeof ref, "<null>");

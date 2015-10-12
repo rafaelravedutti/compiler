@@ -8,25 +8,23 @@
 
 #define DEBUG
 
-#define _process_token(sym)           \
-  symbol = sym;                       \
+#define _process_token(sym)                 \
+  symbol = sym;                             \
   strncpy(token, yytext, MAX_TOKEN)
 
 #ifdef DEBUG
-#  define process_token(sym,ret)      \
-    _process_token(sym);              \
-    fprintf(stdout, #sym " ");        \
+#  define process_token(sym,ret)            \
+    _process_token(sym);                    \
+    fprintf(stdout, #sym "(%s) ", yytext);  \
     return ret
 #else
-#  define process_token(sym,ret)      \
-    _process_token(sym);              \
+#  define process_token(sym,ret)            \
+    _process_token(sym);                    \
     return ret
 #endif
 
 unsigned int lexical_level = 0;
-unsigned int var_offset = 0;
 unsigned int line_number = 1;  
-unsigned int declared_variables = 0;
 
 %}
 
@@ -38,7 +36,9 @@ comment "(*".*"*)"
 
 %%
 
-{new_line} { ++line_number; } 
+{new_line} {
+  ++line_number;
+} 
 
 {ignore}
 
@@ -62,6 +62,10 @@ end {
 
 while {
   process_token(sym_while, WHILE);
+}
+
+do {
+  process_token(sym_do, DO);
 }
 
 for {
@@ -152,8 +156,36 @@ in {
   process_token(sym_parentheses_close, PARENTHESES_CLOSE);
 }
 
+= {
+  process_token(sym_equal, EQUAL);
+}
+
+\<\> {
+  process_token(sym_diff, DIFF);
+}
+
+\< {
+  process_token(sym_less_than, LESS_THAN);
+}
+
+\> {
+  process_token(sym_higher_than, HIGHER_THAN);
+}
+
+\<= {
+  process_token(sym_less_or_equal_than, LESS_OR_EQUAL_THAN);
+}
+
+\>= {
+  process_token(sym_higher_or_equal_than, HIGHER_OR_EQUAL_THAN);
+}
+
 {identifier} {
   process_token(sym_identifier, IDENT);
+}
+
+{number} {
+  process_token(sym_number, CONSTANT);
 }
 
 %%
