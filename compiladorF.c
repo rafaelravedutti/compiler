@@ -94,9 +94,10 @@ unsigned int free_level_symbols() {
       ++var_count;
     }
 
-    aux_sym = sym->sym_next;
-    free(sym);
-    sym = aux_sym;
+    aux_sym = sym;
+    sym = sym->sym_next;
+    free(aux_sym->sym_name);
+    free(aux_sym);
   }
 
   return var_count;
@@ -110,6 +111,7 @@ void free_symbols() {
   while(sym != NULL) {
     aux_sym = sym;
     sym = sym->sym_next;
+    free(aux_sym->sym_name);
     free(aux_sym);
   }
 
