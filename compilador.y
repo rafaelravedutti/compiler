@@ -87,9 +87,6 @@ instruction :
   FUNCTION IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE
   | /* OR */
   PROCEDURE IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE 
-  | /* OR */
-  IDENT { ident_ref = get_symbol_ref(token); }
-  PARENTHESES_OPEN ident_list PARENTHESES_CLOSE
 ;
 
 expression :
