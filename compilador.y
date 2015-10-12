@@ -25,8 +25,7 @@ program :
 block :
   variable_declaration_part
   composed_instructions
-  { generate_code(NULL, "DMEM %d", block_variables);
-    free_level_symbols(); } 
+  { generate_code(NULL, "DMEM %u", free_level_symbols()); } 
 ;
 
 /* Declaração de variáveis */
@@ -45,7 +44,7 @@ declare_vars_block :
 
 declare_vars_line :
   { line_variables = 0; } variable_list COLON type 
-  { generate_code(NULL, "AMEM %d", line_variables); } SEMICOLON
+  { generate_code(NULL, "AMEM %u", line_variables); } SEMICOLON
 ;
 
 type :
@@ -77,8 +76,7 @@ instructions :
 ; 
 
 instruction :
-  IDENT { ident_ref = get_symbol_ref(token); } SET 
-  expression { generate_code(NULL, "ARMZ %s", ident_ref); }
+  IDENT { ident_ref = get_symbol_ref(token); } ident_instruction
   | /* OR */
   WHILE expression DO composed_instructions
   | /* OR */
@@ -89,11 +87,16 @@ instruction :
   PROCEDURE IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE 
 ;
 
+ident_instruction :
+  SET expression { generate_code(NULL, "ARMZ %s", ident_ref); }
+  | /* OR */
+  PARENTHESES_OPEN ident_list PARENTHESES_CLOSE
+;
+
 expression :
   IDENT { generate_code(NULL, "CRVL %s", get_symbol_ref(token)); }
   | /* OR */
   CONSTANT { generate_code(NULL, "CRCT %s", token); }
-  | /* OR */
 ;
 
 %%

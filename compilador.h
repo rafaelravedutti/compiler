@@ -30,6 +30,11 @@ struct symbol_table {
   struct symbol_table *sym_next;
 };
 
+struct stack_node {
+  void *stack_value;
+  struct stack_node *stack_next;
+};
+
 /* Variáveis globais */
 char token[MAX_TOKEN];
 char *ident_ref;
@@ -41,6 +46,10 @@ unsigned int line_variables;
 extern unsigned int lexical_level;
 extern unsigned int line_number;
 
+/* Funções do bison */
+int yylex(void);
+void yyerror(const char *);
+
 /* Funções de entrada e saída do compilador */
 void generate_code(const char *label, const char *code, ...);
 void print_error(const char *error, ...);
@@ -48,5 +57,11 @@ void print_error(const char *error, ...);
 /* Funções da tabela de símbolos */
 void create_symbol(const char *name, symbol_type type);
 char *get_symbol_ref(const char *name);
-void free_level_symbols();
+unsigned int free_level_symbols();
 void free_symbols();
+
+/* Funções de pilha */
+void push(struct stack_node **stack, void *value);
+void *pop(struct stack_node **stack);
+void ipush(struct stack_node **stack, int value);
+int ipop(struct stack_node **stack);

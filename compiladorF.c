@@ -56,11 +56,10 @@ void create_symbol(const char *name, symbol_type type) {
   }
 
   if(sym_tb_base != NULL) {
-    sym_tb_base->sym_next = sym;
-  } else {
-    sym_tb_base = sym;
+    sym->sym_next = sym_tb_base;
   }
 
+  sym_tb_base = sym;
   ++block_variables;
 }
 
@@ -71,7 +70,7 @@ char *get_symbol_ref(const char *name) {
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
     if(strcmp(sym->sym_name, name) == 0) {
       if(sym->sym_type == sym_type_var) {
-        snprintf(ref, sizeof ref, "%d %d", sym->sym_lex_level, sym->sym_offset);
+        snprintf(ref, sizeof ref, "%u %u", sym->sym_lex_level, sym->sym_offset);
         return ref;
       }
     }
@@ -84,20 +83,23 @@ char *get_symbol_ref(const char *name) {
   return ref;
 }
 
-void free_level_symbols() {
+unsigned int free_level_symbols() {
   struct symbol_table *sym, *aux_sym;
-  unsigned int lex_level;
+  unsigned int var_count = 0;
 
   sym = sym_tb_base;
-  lex_level = sym_tb_base->sym_lex_level;
 
-  while(sym != NULL && sym->sym_lex_level == lex_level) {
-    aux_sym = sym;
-    sym = sym->sym_next;
-    free(aux_sym);
+  while(sym != NULL && sym->sym_lex_level == lexical_level) {
+    if(sym->sym_type == sym_type_var) {
+      ++var_count;
+    }
+
+    aux_sym = sym->sym_next;
+    free(sym);
+    sym = aux_sym;
   }
 
-  sym_tb_base = sym;
+  return var_count;
 }
 
 void free_symbols() {
@@ -112,4 +114,52 @@ void free_symbols() {
   }
 
   sym_tb_base = NULL;
+}
+
+void push(struct stack_node **stack, void *value) {
+  struct stack_node *next;
+
+  next = *stack;
+
+  *stack = (struct stack_node *) malloc(sizeof(struct stack_node));
+
+  if(*stack != NULL) {
+    (*stack)->stack_next = next;
+    (*stack)->stack_value = value;
+  }
+}
+
+void *pop(struct stack_node **stack) {
+  void *ret;
+  struct stack_node *aux;
+
+  if(*stack == NULL) {
+    return NULL;
+  }
+
+  ret = (*stack)->stack_value;
+  aux = *stack;
+  
+  *stack = (*stack)->stack_next;
+  free(aux);
+  return ret;
+}
+
+void ipush(struct stack_node **stack, int value) {
+  int *iptr;
+
+  iptr = (int *) malloc(sizeof(int));
+  *iptr = value;
+  push(stack, iptr);
+}
+
+int ipop(struct stack_node **stack) {
+  int *iptr;
+  int ret;
+
+  iptr = pop(stack);
+  ret = *iptr;
+
+  free(iptr);
+  return ret;
 }
