@@ -13,6 +13,7 @@
 %token PROCEDURE FUNCTION REPEAT UNTIL GOTO LABEL NOT
 %token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
 %token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
+%token AND OR SUM SUB TIMES DIV MOD
 
 %%
 
@@ -94,10 +95,58 @@ ident_instruction :
 ;
 
 expression :
+  expression2
+  | /* OR */
+  NOT expression2
+  | /* OR */
+  expression AND expression2
+  | /* OR */
+  expression OR expression2
+;
+
+expression2 :
+  expression3
+  | /* OR */
+  expression2 EQUAL expression3
+  | /* OR */
+  expression2 DIFF expression3
+  | /* OR */
+  expression2 LESS_THAN expression3
+  | /* OR */
+  expression2 HIGHER_THAN expression3
+  | /* OR */
+  expression2 LESS_OR_EQUAL_THAN expression3
+  | /* OR */
+  expression2 HIGHER_OR_EQUAL_THAN expression3
+
+expression3 :
+  expression4
+  | /* OR */
+  SUB expression4
+  | /* OR */
+  expression3 SUM expression4
+  | /* OR */
+  expression3 SUB expression4
+;
+
+expression4 :
+  expression5
+  | /* OR */
+  expression4 TIMES expression5
+  | /* OR */
+  expression4 DIV expression5
+  | /* OR */
+  expression4 MOD expression5
+;
+
+expression5 :
   IDENT { generate_code(NULL, "CRVL %s", get_symbol_ref(token)); }
   | /* OR */
   CONSTANT { generate_code(NULL, "CRCT %s", token); }
+  | /* OR */
+  PARENTHESES_OPEN expression PARENTHESES_CLOSE
 ;
+
 
 %%
 

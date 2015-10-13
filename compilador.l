@@ -180,6 +180,34 @@ in {
   process_token(sym_higher_or_equal_than, HIGHER_OR_EQUAL_THAN);
 }
 
+and {
+  process_token(sym_and, AND);
+}
+
+or {
+  process_token(sym_or, OR);
+}
+
+\+ {
+  process_token(sym_sum, SUM);
+}
+
+\- {
+  process_token(sym_sub, SUB);
+}
+
+\* {
+  process_token(sym_times, TIMES);
+}
+
+\/ {
+  process_token(sym_div, DIV);
+}
+
+\% {
+  process_token(sym_mod, MOD);
+}
+
 {identifier} {
   process_token(sym_identifier, IDENT);
 }

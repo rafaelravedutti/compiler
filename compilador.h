@@ -13,7 +13,9 @@ typedef enum {
   sym_dot, sym_comma, sym_semicolon, sym_colon,
   sym_set, sym_parentheses_open, sym_parentheses_close,
   sym_equal, sym_diff, sym_less_than, sym_higher_than,
-  sym_less_or_equal_than, sym_higher_or_equal_than
+  sym_less_or_equal_than, sym_higher_or_equal_than,
+  sym_and, sym_or, sym_sum, sym_sub, sym_times,
+  sym_div, sym_mod
 } symbol_name;
 
 typedef enum {
