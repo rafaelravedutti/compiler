@@ -51,7 +51,7 @@ void create_symbol(const char *name, symbol_type type) {
       free(sym);
     }
 
-    fprintf(stderr, "insertSymbol(): Erro ao alocar memória para símbolo \"%s\".\n", name);
+    fprintf(stderr, "create_symbol(): Erro ao alocar memória para símbolo \"%s\".\n", name);
     return;
   }
 
@@ -63,7 +63,7 @@ void create_symbol(const char *name, symbol_type type) {
   ++block_variables;
 }
 
-char *get_symbol_ref(const char *name) {
+char *get_symbol_reference(const char *name) {
   static char ref[MAX_SYMBOL_REF];
   struct symbol_table *sym;
 

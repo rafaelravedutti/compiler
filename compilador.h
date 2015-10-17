@@ -39,8 +39,10 @@ struct stack_node {
 
 /* Variáveis globais */
 char token[MAX_TOKEN];
-char *ident_ref;
-symbol_name symbol, relation;
+char *variable_reference;
+char *function_reference;
+symbol_name symbol;
+symbol_name relation;
 unsigned int block_variables;
 unsigned int line_variables;
 
@@ -58,7 +60,7 @@ void print_error(const char *error, ...);
 
 /* Funções da tabela de símbolos */
 void create_symbol(const char *name, symbol_type type);
-char *get_symbol_ref(const char *name);
+char *get_symbol_reference(const char *name);
 unsigned int free_level_symbols();
 void free_symbols();
 

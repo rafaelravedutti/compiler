@@ -1,4 +1,5 @@
 %{
+
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -14,6 +15,9 @@
 %token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
 %token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
 %token AND OR SUM SUB TIMES DIV MOD
+
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 
 %%
 
@@ -65,6 +69,10 @@ ident_list :
   IDENT
 ;
 
+variable :
+  IDENT { variable_reference = get_symbol_reference(token); }
+;
+
 /* Comandos */
 composed_instructions :
   T_BEGIN instructions T_END 
@@ -77,74 +85,94 @@ instructions :
 ; 
 
 instruction :
-  IDENT { ident_ref = get_symbol_ref(token); } ident_instruction
+  set_instruction
   | /* OR */
-  WHILE expression DO composed_instructions
+  function_call
   | /* OR */
-  IF expression THEN composed_instructions
+  conditional_instruction
   | /* OR */
-  FUNCTION IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE
-  | /* OR */
-  PROCEDURE IDENT PARENTHESES_OPEN declare_vars_block PARENTHESES_CLOSE 
+  loop_instruction
 ;
 
-ident_instruction :
-  SET expression { generate_code(NULL, "ARMZ %s", ident_ref); }
+set_instruction :
+  variable SET expression { generate_code(NULL, "ARMZ %s", variable_reference); }
+;
+
+function_call:
+  IDENT { function_reference = get_symbol_reference(token); }
+  PARENTHESES_OPEN expression_list PARENTHESES_CLOSE
+;
+
+conditional_instruction :
+  IF bool_expression THEN composed_instructions %prec LOWER_THAN_ELSE
   | /* OR */
-  PARENTHESES_OPEN ident_list PARENTHESES_CLOSE
+  IF bool_expression THEN composed_instructions ELSE composed_instructions
+;
+
+loop_instruction :
+  WHILE bool_expression DO composed_instructions
+;
+
+relation_operator :
+  EQUAL
+  | /* OR */
+  DIFF
+  | /* OR */
+  LESS_THAN
+  | /* OR */
+  LESS_OR_EQUAL_THAN
+  | /* OR */
+  HIGHER_THAN
+  | /* OR */
+  HIGHER_OR_EQUAL_THAN
+;
+
+bool_expression :
+  expression
+  | /* OR */
+  bool_expression relation_operator { relation = symbol; } expression
 ;
 
 expression :
-  expression2
+  term
   | /* OR */
-  NOT expression2
+  SUM term
   | /* OR */
-  expression AND expression2
+  SUB term
   | /* OR */
-  expression OR expression2
+  expression SUM term { generate_code(NULL, "SOMA"); }
+  | /* OR */
+  expression SUB term { generate_code(NULL, "SUB"); }
+  | /* OR */
+  expression OR term
 ;
 
-expression2 :
-  expression3
+term :
+  factor
   | /* OR */
-  expression2 EQUAL expression3
+  term TIMES factor { generate_code(NULL, "MULT"); }
   | /* OR */
-  expression2 DIFF expression3
+  term DIV factor { generate_code(NULL, "DIVI"); }
   | /* OR */
-  expression2 LESS_THAN expression3
+  term MOD factor
   | /* OR */
-  expression2 HIGHER_THAN expression3
-  | /* OR */
-  expression2 LESS_OR_EQUAL_THAN expression3
-  | /* OR */
-  expression2 HIGHER_OR_EQUAL_THAN expression3
-
-expression3 :
-  expression4
-  | /* OR */
-  SUB expression4
-  | /* OR */
-  expression3 SUM expression4
-  | /* OR */
-  expression3 SUB expression4
+  term AND factor
 ;
 
-expression4 :
-  expression5
-  | /* OR */
-  expression4 TIMES expression5
-  | /* OR */
-  expression4 DIV expression5
-  | /* OR */
-  expression4 MOD expression5
-;
-
-expression5 :
-  IDENT { generate_code(NULL, "CRVL %s", get_symbol_ref(token)); }
+factor :
+  variable { generate_code(NULL, "CRVL %s", variable_reference); }
   | /* OR */
   CONSTANT { generate_code(NULL, "CRCT %s", token); }
   | /* OR */
+  function_call
+  | /* OR */
   PARENTHESES_OPEN expression PARENTHESES_CLOSE
+;
+
+expression_list:
+  expression
+  | /* OR */
+  expression COMMA expression
 ;
 
 
@@ -161,7 +189,7 @@ int main (int argc, const char *argv[]) {
 
   if((fp = fopen(argv[1], "r")) == NULL) {
     fprintf(stdout, "Ocorreu um erro ao abrir o arquivo!\n");
-    return(-1);
+    return -1;
   }
 
   yyin = fp;
