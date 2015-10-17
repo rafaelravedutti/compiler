@@ -19,13 +19,20 @@ typedef enum {
 } symbol_name;
 
 typedef enum {
+  null_symbol = 0,
+  variable_symbol,
+  function_symbol 
+} symbol_feature;
+
+typedef enum {
   sym_type_null = 0,
-  sym_type_var, 
-  sym_type_function 
+  sym_type_integer,
+  sym_type_boolean
 } symbol_type;
 
 struct symbol_table {
   char *sym_name;
+  symbol_feature sym_feature;
   symbol_type sym_type;
   int sym_lex_level;
   int sym_offset;
@@ -43,6 +50,7 @@ char *variable_reference;
 char *function_reference;
 symbol_name symbol;
 symbol_name relation;
+symbol_type symbol_type_id;
 unsigned int block_variables;
 unsigned int line_variables;
 
@@ -58,9 +66,15 @@ void yyerror(const char *);
 void generate_code(const char *label, const char *code, ...);
 void print_error(const char *error, ...);
 
+/* Funções de tipos de dados */
+symbol_type parse_type(const char *type);
+
 /* Funções da tabela de símbolos */
-void create_symbol(const char *name, symbol_type type);
+struct symbol_table *create_symbol(const char *name, symbol_feature feature);
+struct symbol_table *find_symbol(const char *name);
 char *get_symbol_reference(const char *name);
+void set_last_symbols_type(unsigned int nsymbols, symbol_type tsym);
+void print_symbols_table();
 unsigned int free_level_symbols();
 void free_symbols();
 

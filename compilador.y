@@ -49,18 +49,19 @@ declare_vars_block :
 
 declare_vars_line :
   { line_variables = 0; } variable_list COLON type 
-  { generate_code(NULL, "AMEM %u", line_variables); } SEMICOLON
+  { set_last_symbols_type(line_variables, symbol_type_id);
+    generate_code(NULL, "AMEM %u", line_variables); } SEMICOLON
 ;
 
 type :
-  IDENT
+  IDENT { symbol_type_id = parse_type(token); }
 ;
 
 variable_list :
   variable_list COMMA
-  IDENT { create_symbol(token, sym_type_var), ++line_variables; }
+  IDENT { create_symbol(token, variable_symbol), ++line_variables; }
   | /* OR */
-  IDENT { create_symbol(token, sym_type_var), ++line_variables; }
+  IDENT { create_symbol(token, variable_symbol), ++line_variables; }
 ;
 
 ident_list :
@@ -138,13 +139,13 @@ expression :
   | /* OR */
   SUM term
   | /* OR */
-  SUB term
+  SUB term { generate_code(NULL, "INVR"); }
   | /* OR */
   expression SUM term { generate_code(NULL, "SOMA"); }
   | /* OR */
   expression SUB term { generate_code(NULL, "SUB"); }
   | /* OR */
-  expression OR term
+  expression OR term { generate_code(NULL, "DISJ"); }
 ;
 
 term :
@@ -154,12 +155,12 @@ term :
   | /* OR */
   term DIV factor { generate_code(NULL, "DIVI"); }
   | /* OR */
-  term MOD factor
-  | /* OR */
-  term AND factor
+  term AND factor { generate_code(NULL, "CONJ"); }
 ;
 
 factor :
+  NOT factor { generate_code(NULL, "NEGA"); }
+  | /* OR */
   variable { generate_code(NULL, "CRVL %s", variable_reference); }
   | /* OR */
   CONSTANT { generate_code(NULL, "CRCT %s", token); }
