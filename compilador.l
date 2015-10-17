@@ -12,14 +12,27 @@
   symbol = sym;                             \
   strncpy(token, yytext, MAX_TOKEN)
 
+#define _process_symbol(sym)                \
+  symbol = sym
+ 
 #ifdef DEBUG
 #  define process_token(sym,ret)            \
     _process_token(sym);                    \
     fprintf(stdout, #sym "(%s) ", yytext);  \
     return ret
+
+#  define process_symbol(sym,ret)           \
+    _process_symbol(sym);                   \
+    fprintf(stdout, #sym "(%s) ", yytext);  \
+    return ret
+
 #else
 #  define process_token(sym,ret)            \
     _process_token(sym);                    \
+    return ret
+
+#  define process_symbol(sym,ret)           \
+    _process_symbol(sym);                   \
     return ret
 #endif
 
@@ -129,7 +142,7 @@ in {
 }
 
 := {
-  process_token(sym_set, SET);
+  process_symbol(sym_set, SET);
 }
 
 \; {
@@ -149,11 +162,11 @@ in {
 }
 
 \( {
-  process_token(sym_parentheses_open, PARENTHESES_OPEN);
+  process_symbol(sym_parentheses_open, PARENTHESES_OPEN);
 }
 
 \) {
-  process_token(sym_parentheses_close, PARENTHESES_CLOSE);
+  process_symbol(sym_parentheses_close, PARENTHESES_CLOSE);
 }
 
 = {
