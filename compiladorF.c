@@ -43,6 +43,20 @@ symbol_type parse_type(const char *type) {
           sym_type_null;
 }
 
+char *get_symbol_type_string(symbol_type type) {
+  static char type_str[8];
+
+  if(type == sym_type_integer) {
+    strncpy(type_str, "integer", sizeof type_str);
+  } else if(type == sym_type_boolean) {
+    strncpy(type_str, "boolean", sizeof type_str);
+  } else {
+    strncpy(type_str, "null", sizeof type_str);
+  }
+
+  return type_str;
+}
+
 struct symbol_table *create_symbol(const char *name, symbol_feature feature) {
   struct symbol_table *sym, *chksym;
 
@@ -236,4 +250,22 @@ int ipop(struct stack_node **stack) {
 
   free(iptr);
   return ret;
+}
+
+void process_stack_type(struct stack_node **stack, symbol_type type, struct stack_node **dest) {
+  symbol_type tstk;
+
+  tstk = (symbol_type) ipop(stack);
+
+  if(tstk != type) {
+    print_error("Invalid expression type, expected '%s', found '%s'\n", get_symbol_type_string(type), get_symbol_type_string(tstk));
+  }
+
+  if(dest != NULL) {
+    ipush(dest, (int) tstk);
+  }
+}
+
+void transfer_stack_type(struct stack_node **source, struct stack_node **dest) {
+  ipush(dest, ipop(source));
 }

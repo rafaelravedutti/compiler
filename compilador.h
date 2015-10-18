@@ -46,8 +46,12 @@ struct stack_node {
 
 /* Variáveis globais */
 char token[MAX_TOKEN];
+char variable_name[MAX_TOKEN];
 char *variable_reference;
 char *function_reference;
+struct stack_node *expr_stack;
+struct stack_node *term_stack;
+struct stack_node *factor_stack;
 symbol_name symbol;
 symbol_name relation;
 symbol_type symbol_type_id;
@@ -83,3 +87,7 @@ void push(struct stack_node **stack, void *value);
 void *pop(struct stack_node **stack);
 void ipush(struct stack_node **stack, int value);
 int ipop(struct stack_node **stack);
+
+/* Funções de pilha de tipos de dados */
+void process_stack_type(struct stack_node **stack, symbol_type type, struct stack_node **dest);
+void transfer_stack_type(struct stack_node **source, struct stack_node **dest);

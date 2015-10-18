@@ -48,20 +48,29 @@ declare_vars_block :
 ;
 
 declare_vars_line :
-  { line_variables = 0; } variable_list COLON type 
-  { set_last_symbols_type(line_variables, symbol_type_id);
-    generate_code(NULL, "AMEM %u", line_variables); } SEMICOLON
+  { line_variables = 0; }
+  variable_list COLON type  {
+    set_last_symbols_type(line_variables, symbol_type_id);
+    generate_code(NULL, "AMEM %u", line_variables);
+  }
+  SEMICOLON
 ;
 
 type :
-  IDENT { symbol_type_id = parse_type(token); }
+  IDENT {
+    symbol_type_id = parse_type(token);
+  }
 ;
 
 variable_list :
   variable_list COMMA
-  IDENT { create_symbol(token, variable_symbol), ++line_variables; }
+  IDENT {
+    create_symbol(token, variable_symbol), ++line_variables;
+  }
   | /* OR */
-  IDENT { create_symbol(token, variable_symbol), ++line_variables; }
+  IDENT {
+    create_symbol(token, variable_symbol), ++line_variables;
+  }
 ;
 
 ident_list :
@@ -71,7 +80,10 @@ ident_list :
 ;
 
 variable :
-  IDENT { variable_reference = get_symbol_reference(token); }
+  IDENT {
+    strncpy(variable_name, token, sizeof variable_name);
+    variable_reference = get_symbol_reference(token);
+  }
 ;
 
 /* Comandos */
@@ -96,11 +108,16 @@ instruction :
 ;
 
 set_instruction :
-  variable SET expression { generate_code(NULL, "ARMZ %s", variable_reference); }
+  variable SET expression {
+    process_stack_type(&expr_stack, find_symbol(variable_name)->sym_type, NULL);
+    generate_code(NULL, "ARMZ %s", variable_reference);
+  }
 ;
 
 function_call:
-  IDENT { function_reference = get_symbol_reference(token); }
+  IDENT {
+    function_reference = get_symbol_reference(token);
+  }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE
 ;
 
@@ -131,39 +148,84 @@ relation_operator :
 bool_expression :
   expression
   | /* OR */
-  bool_expression relation_operator { relation = symbol; } expression
+  bool_expression relation_operator {
+    relation = symbol;
+  }
+  expression
 ;
 
 expression :
-  term
+  term {
+    transfer_stack_type(&term_stack, &expr_stack);
+  }
   | /* OR */
-  SUM term
+  SUM term {
+    process_stack_type(&term_stack, sym_type_integer, &expr_stack);
+  }
   | /* OR */
-  SUB term { generate_code(NULL, "INVR"); }
+  SUB term {
+    process_stack_type(&term_stack, sym_type_integer, &expr_stack);
+    generate_code(NULL, "INVR");
+  }
   | /* OR */
-  expression SUM term { generate_code(NULL, "SOMA"); }
+  expression SUM term {
+    process_stack_type(&expr_stack, sym_type_integer, NULL);
+    process_stack_type(&term_stack, sym_type_integer, &expr_stack);
+    generate_code(NULL, "SOMA");
+  }
   | /* OR */
-  expression SUB term { generate_code(NULL, "SUB"); }
+  expression SUB term {
+    process_stack_type(&expr_stack, sym_type_integer, NULL);
+    process_stack_type(&term_stack, sym_type_integer, &expr_stack);
+    generate_code(NULL, "SUB");
+  }
   | /* OR */
-  expression OR term { generate_code(NULL, "DISJ"); }
+  expression OR term {
+    process_stack_type(&expr_stack, sym_type_boolean, NULL);
+    process_stack_type(&term_stack, sym_type_boolean, &expr_stack);
+    generate_code(NULL, "DISJ");
+  }
 ;
 
 term :
-  factor
+  factor {
+    transfer_stack_type(&factor_stack, &term_stack);
+  }
   | /* OR */
-  term TIMES factor { generate_code(NULL, "MULT"); }
+  term TIMES factor {
+    process_stack_type(&term_stack, sym_type_integer, NULL);
+    process_stack_type(&factor_stack, sym_type_integer, &term_stack);
+    generate_code(NULL, "MULT");
+  }
   | /* OR */
-  term DIV factor { generate_code(NULL, "DIVI"); }
+  term DIV factor {
+    process_stack_type(&term_stack, sym_type_integer, NULL);
+    process_stack_type(&factor_stack, sym_type_integer, &term_stack);
+    generate_code(NULL, "DIVI");
+  }
   | /* OR */
-  term AND factor { generate_code(NULL, "CONJ"); }
+  term AND factor {
+    process_stack_type(&term_stack, sym_type_boolean, NULL);
+    process_stack_type(&factor_stack, sym_type_boolean, &term_stack);
+    generate_code(NULL, "CONJ");
+  }
 ;
 
 factor :
-  NOT factor { generate_code(NULL, "NEGA"); }
+  NOT factor {
+    process_stack_type(&factor_stack, sym_type_boolean, &factor_stack);
+    generate_code(NULL, "NEGA");
+  }
   | /* OR */
-  variable { generate_code(NULL, "CRVL %s", variable_reference); }
+  variable {
+    ipush(&factor_stack, (int) find_symbol(variable_name)->sym_type);
+    generate_code(NULL, "CRVL %s", variable_reference);
+  }
   | /* OR */
-  CONSTANT { generate_code(NULL, "CRCT %s", token); }
+  CONSTANT {
+    ipush(&factor_stack, (int) sym_type_integer);
+    generate_code(NULL, "CRCT %s", token);
+  }
   | /* OR */
   function_call
   | /* OR */
