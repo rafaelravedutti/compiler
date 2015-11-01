@@ -1,6 +1,9 @@
 /* Tamanho máximo de um símbolo no código Pascal */
 #define MAX_TOKEN         32
 
+/* Tamanho máximo de um rótulo */
+#define MAX_LABEL         8
+
 /* Tamanho máximo de uma referência à algum símbolo no código MEPA */
 #define MAX_SYMBOL_REF    32
 
@@ -15,7 +18,7 @@ typedef enum {
   sym_equal, sym_diff, sym_less_than, sym_higher_than,
   sym_less_or_equal_than, sym_higher_or_equal_than,
   sym_and, sym_or, sym_sum, sym_sub, sym_times,
-  sym_div, sym_mod
+  sym_div, sym_mod, sym_true, sym_false
 } symbol_name;
 
 typedef enum {
@@ -52,11 +55,17 @@ char *function_reference;
 struct stack_node *expr_stack;
 struct stack_node *term_stack;
 struct stack_node *factor_stack;
+struct stack_node *if_stack;
+struct stack_node *while_stack;
 symbol_name symbol;
 symbol_name relation;
 symbol_type symbol_type_id;
 unsigned int block_variables;
 unsigned int line_variables;
+unsigned int if_label;
+unsigned int if_not_label;
+unsigned int while_inner_label;
+unsigned int while_outter_label;
 
 /* Variáveis externas */
 extern unsigned int lexical_level;
@@ -87,7 +96,14 @@ void push(struct stack_node **stack, void *value);
 void *pop(struct stack_node **stack);
 void ipush(struct stack_node **stack, int value);
 int ipop(struct stack_node **stack);
+void uipush(struct stack_node **stack, unsigned int value);
+unsigned int uipop(struct stack_node **stack);
 
 /* Funções de pilha de tipos de dados */
 void process_stack_type(struct stack_node **stack, symbol_type type, struct stack_node **dest);
 void transfer_stack_type(struct stack_node **source, struct stack_node **dest);
+
+/* Funções de rótulos */
+unsigned int get_next_label();
+void generate_label(unsigned int label);
+const char *get_label_string(unsigned int label);

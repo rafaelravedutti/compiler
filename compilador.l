@@ -58,87 +58,95 @@ comment "(*".*"*)"
 {comment}
 
 program {
-  process_token(sym_program, PROGRAM);
+  process_symbol(sym_program, PROGRAM);
 }
 
 var {
-  process_token(sym_var, VAR);
+  process_symbol(sym_var, VAR);
 }
 
 begin {
-  process_token(sym_begin, T_BEGIN);
+  process_symbol(sym_begin, T_BEGIN);
 }
 
 end {
-  process_token(sym_end, T_END);
+  process_symbol(sym_end, T_END);
 }
 
 while {
-  process_token(sym_while, WHILE);
+  process_symbol(sym_while, WHILE);
 }
 
 do {
-  process_token(sym_do, DO);
+  process_symbol(sym_do, DO);
 }
 
 for {
-  process_token(sym_for, FOR);
+  process_symbol(sym_for, FOR);
 }
 
 to {
-  process_token(sym_to, TO);
+  process_symbol(sym_to, TO);
 }
 
 downto {
-  process_token(sym_downto, DOWNTO);
+  process_symbol(sym_downto, DOWNTO);
 }
 
 if {
-  process_token(sym_if, IF);
+  process_symbol(sym_if, IF);
 }
 
 then {
-  process_token(sym_then, THEN);
+  process_symbol(sym_then, THEN);
 }
 
 else {
-  process_token(sym_else, ELSE);
+  process_symbol(sym_else, ELSE);
 }
 
 procedure {
-  process_token(sym_procedure, PROCEDURE);
+  process_symbol(sym_procedure, PROCEDURE);
 }
 
 function {
-  process_token(sym_function, FUNCTION);
+  process_symbol(sym_function, FUNCTION);
 }
 
 repeat {
-  process_token(sym_repeat, REPEAT);
+  process_symbol(sym_repeat, REPEAT);
 }
 
 until {
-  process_token(sym_until, UNTIL);
+  process_symbol(sym_until, UNTIL);
 }
 
 goto {
-  process_token(sym_goto, GOTO);
+  process_symbol(sym_goto, GOTO);
 }
 
 label {
-  process_token(sym_label, LABEL);
+  process_symbol(sym_label, LABEL);
 }
 
 not {
-  process_token(sym_not, NOT);
+  process_symbol(sym_not, NOT);
 }
 
 case {
-  process_token(sym_case, CASE);
+  process_symbol(sym_case, CASE);
 }
 
 in {
-  process_token(sym_in, IN);
+  process_symbol(sym_in, IN);
+}
+
+true {
+  process_symbol(sym_true, TRUE);
+}
+
+false {
+  process_symbol(sym_false, FALSE);
 }
 
 := {
@@ -146,19 +154,19 @@ in {
 }
 
 \; {
-  process_token(sym_semicolon, SEMICOLON);
+  process_symbol(sym_semicolon, SEMICOLON);
 }
 
 \: {
-  process_token(sym_colon, COLON);
+  process_symbol(sym_colon, COLON);
 }
 
 \, {
-  process_token(sym_comma, COMMA);
+  process_symbol(sym_comma, COMMA);
 }
 
 \. {
-  process_token(sym_dot, DOT);
+  process_symbol(sym_dot, DOT);
 }
 
 \( {
@@ -170,55 +178,55 @@ in {
 }
 
 = {
-  process_token(sym_equal, EQUAL);
+  process_symbol(sym_equal, EQUAL);
 }
 
 \<\> {
-  process_token(sym_diff, DIFF);
+  process_symbol(sym_diff, DIFF);
 }
 
 \< {
-  process_token(sym_less_than, LESS_THAN);
+  process_symbol(sym_less_than, LESS_THAN);
 }
 
 \> {
-  process_token(sym_higher_than, HIGHER_THAN);
+  process_symbol(sym_higher_than, HIGHER_THAN);
 }
 
 \<= {
-  process_token(sym_less_or_equal_than, LESS_OR_EQUAL_THAN);
+  process_symbol(sym_less_or_equal_than, LESS_OR_EQUAL_THAN);
 }
 
 \>= {
-  process_token(sym_higher_or_equal_than, HIGHER_OR_EQUAL_THAN);
+  process_symbol(sym_higher_or_equal_than, HIGHER_OR_EQUAL_THAN);
 }
 
 and {
-  process_token(sym_and, AND);
+  process_symbol(sym_and, AND);
 }
 
 or {
-  process_token(sym_or, OR);
+  process_symbol(sym_or, OR);
 }
 
 \+ {
-  process_token(sym_sum, SUM);
+  process_symbol(sym_sum, SUM);
 }
 
 \- {
-  process_token(sym_sub, SUB);
+  process_symbol(sym_sub, SUB);
 }
 
 \* {
-  process_token(sym_times, TIMES);
+  process_symbol(sym_times, TIMES);
 }
 
 \/ {
-  process_token(sym_div, DIV);
+  process_symbol(sym_div, DIV);
 }
 
 \% {
-  process_token(sym_mod, MOD);
+  process_symbol(sym_mod, MOD);
 }
 
 {identifier} {

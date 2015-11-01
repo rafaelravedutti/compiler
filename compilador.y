@@ -14,7 +14,7 @@
 %token PROCEDURE FUNCTION REPEAT UNTIL GOTO LABEL NOT
 %token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
 %token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
-%token AND OR SUM SUB TIMES DIV MOD
+%token AND OR SUM SUB TIMES DIV MOD TRUE FALSE
 
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
@@ -114,21 +114,57 @@ set_instruction :
   }
 ;
 
-function_call:
+function_call :
   IDENT {
     function_reference = get_symbol_reference(token);
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE
 ;
 
+if_statement:
+  IF expression {
+    if_not_label = get_next_label();
+    process_stack_type(&expr_stack, sym_type_boolean, NULL);
+    generate_code(NULL, "DSVF %s", get_label_string(if_not_label));
+    uipush(&if_stack, if_not_label);
+  }
+  THEN composed_instructions
+;
+
 conditional_instruction :
-  IF bool_expression THEN composed_instructions %prec LOWER_THAN_ELSE
+  if_statement %prec LOWER_THAN_ELSE {
+    generate_label(uipop(&if_stack));
+  }
   | /* OR */
-  IF bool_expression THEN composed_instructions ELSE composed_instructions
+  if_statement ELSE {
+    if_label = get_next_label();
+    generate_code(NULL, "DSVS %s", get_label_string(if_label));
+    generate_label(uipop(&if_stack));
+    uipush(&if_stack, if_label);
+  }
+  composed_instructions {
+    generate_label(uipop(&if_stack));
+  }
 ;
 
 loop_instruction :
-  WHILE bool_expression DO composed_instructions
+  WHILE {
+    while_inner_label = get_next_label();
+    while_outter_label = get_next_label(); 
+    generate_label(while_inner_label);
+  }
+  expression {
+    process_stack_type(&expr_stack, sym_type_boolean, NULL);
+    generate_code(NULL, "DSVF %s", get_label_string(while_outter_label));
+    uipush(&while_stack, while_inner_label);
+    uipush(&while_stack, while_outter_label);
+  }
+  DO composed_instructions {
+    while_outter_label = uipop(&while_stack);
+    while_inner_label = uipop(&while_stack);
+    generate_code(NULL, "DSVS %s", get_label_string(while_inner_label));
+    generate_label(while_outter_label);
+  }
 ;
 
 relation_operator :
@@ -145,16 +181,16 @@ relation_operator :
   HIGHER_OR_EQUAL_THAN
 ;
 
-bool_expression :
-  expression
+expression :
+  simple_expression
   | /* OR */
-  bool_expression relation_operator {
+  expression relation_operator {
     relation = symbol;
   }
-  expression
+  simple_expression
 ;
 
-expression :
+simple_expression :
   term {
     transfer_stack_type(&term_stack, &expr_stack);
   }
@@ -168,19 +204,19 @@ expression :
     generate_code(NULL, "INVR");
   }
   | /* OR */
-  expression SUM term {
+  simple_expression SUM term {
     process_stack_type(&expr_stack, sym_type_integer, NULL);
     process_stack_type(&term_stack, sym_type_integer, &expr_stack);
     generate_code(NULL, "SOMA");
   }
   | /* OR */
-  expression SUB term {
+  simple_expression SUB term {
     process_stack_type(&expr_stack, sym_type_integer, NULL);
     process_stack_type(&term_stack, sym_type_integer, &expr_stack);
     generate_code(NULL, "SUB");
   }
   | /* OR */
-  expression OR term {
+  simple_expression OR term {
     process_stack_type(&expr_stack, sym_type_boolean, NULL);
     process_stack_type(&term_stack, sym_type_boolean, &expr_stack);
     generate_code(NULL, "DISJ");
@@ -227,9 +263,21 @@ factor :
     generate_code(NULL, "CRCT %s", token);
   }
   | /* OR */
+  TRUE {
+    ipush(&factor_stack, (int) sym_type_boolean);
+    generate_code(NULL, "CRCT 1");
+  }
+  | /* OR */
+  FALSE {
+    ipush(&factor_stack, (int) sym_type_boolean);
+    generate_code(NULL, "CRCT 0");
+  }
+  | /* OR */
   function_call
   | /* OR */
-  PARENTHESES_OPEN expression PARENTHESES_CLOSE
+  PARENTHESES_OPEN expression PARENTHESES_CLOSE {
+    transfer_stack_type(&expr_stack, &factor_stack);
+  }
 ;
 
 expression_list:
