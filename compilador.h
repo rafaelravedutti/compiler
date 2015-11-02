@@ -24,7 +24,10 @@ typedef enum {
 typedef enum {
   null_symbol = 0,
   variable_symbol,
-  function_symbol 
+  function_symbol,
+  procedure_symbol,
+  val_parameter_symbol,
+  ref_parameter_symbol 
 } symbol_feature;
 
 typedef enum {
@@ -33,13 +36,28 @@ typedef enum {
   sym_type_boolean
 } symbol_type;
 
+typedef enum {
+  copied_param,
+  referenced_param
+} pass_option;
+
 struct symbol_table {
   char *sym_name;
   symbol_feature sym_feature;
   symbol_type sym_type;
-  int sym_lex_level;
   int sym_offset;
+  unsigned int sym_lex_level;
+  unsigned int sym_label;         /* functions/procedures only */
+  unsigned int sym_nparams;       /* functions/procedures only */
+  struct param_list *sym_params;  /* functions/procedures only */
   struct symbol_table *sym_next;
+};
+
+struct param_list {
+  symbol_type param_type;
+  pass_option param_option;
+  unsigned int param_count;
+  struct param_list *param_next;
 };
 
 struct stack_node {
@@ -49,23 +67,18 @@ struct stack_node {
 
 /* Variáveis globais */
 char token[MAX_TOKEN];
-char variable_name[MAX_TOKEN];
-char *variable_reference;
-char *function_reference;
-struct stack_node *expr_stack;
-struct stack_node *term_stack;
-struct stack_node *factor_stack;
-struct stack_node *if_stack;
-struct stack_node *while_stack;
-symbol_name symbol;
-symbol_name relation;
+struct symbol_table *variable_ptr, *subroutine_ptr;
+struct stack_node *expr_stack, *term_stack, *factor_stack;
+struct stack_node *if_stack, *while_stack;
+struct stack_node *variable_stack, *subroutine_stack;
+unsigned int block_variables, line_variables;
+unsigned int block_parameters, line_parameters;
+unsigned int if_label, if_not_label;
+unsigned int while_inner_label, while_outter_label;
+unsigned int subroutine_label;
+symbol_name symbol, relation;
 symbol_type symbol_type_id;
-unsigned int block_variables;
-unsigned int line_variables;
-unsigned int if_label;
-unsigned int if_not_label;
-unsigned int while_inner_label;
-unsigned int while_outter_label;
+pass_option passed_option;
 
 /* Variáveis externas */
 extern unsigned int lexical_level;
@@ -83,12 +96,13 @@ void print_error(const char *error, ...);
 symbol_type parse_type(const char *type);
 
 /* Funções da tabela de símbolos */
-struct symbol_table *create_symbol(const char *name, symbol_feature feature);
-struct symbol_table *find_symbol(const char *name);
-char *get_symbol_reference(const char *name);
+struct symbol_table *create_symbol(const char *name, symbol_feature feature, unsigned int label);
+struct symbol_table *find_symbol(const char *name, symbol_feature feature, int must_exist);
+struct symbol_table *find_variable_or_parameter(const char *name);
 void set_last_symbols_type(unsigned int nsymbols, symbol_type tsym);
+void set_parameters_offset(unsigned int nsymbols);
 void print_symbols_table();
-unsigned int free_level_symbols();
+void free_level_symbols();
 void free_symbols();
 
 /* Funções de pilha */
@@ -103,7 +117,12 @@ unsigned int uipop(struct stack_node **stack);
 void process_stack_type(struct stack_node **stack, symbol_type type, struct stack_node **dest);
 void transfer_stack_type(struct stack_node **source, struct stack_node **dest);
 
+/* Funções de fila */
+void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, pass_option opt);
+pass_option get_param_option(struct param_list *p, unsigned int param_no);
+void check_param(struct param_list *p, unsigned int param_no, symbol_type type);
+
 /* Funções de rótulos */
 unsigned int get_next_label();
 void generate_label(unsigned int label);
-const char *get_label_string(unsigned int label);
+char *get_label_string(unsigned int label);

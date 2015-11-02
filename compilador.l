@@ -18,12 +18,12 @@
 #ifdef DEBUG
 #  define process_token(sym,ret)            \
     _process_token(sym);                    \
-    fprintf(stdout, #sym "(%s) ", yytext);  \
+    fprintf(stdout, #sym "(%s)\n", yytext);  \
     return ret
 
 #  define process_symbol(sym,ret)           \
     _process_symbol(sym);                   \
-    fprintf(stdout, #sym "(%s) ", yytext);  \
+    fprintf(stdout, #sym "(%s)\n", yytext);  \
     return ret
 
 #else

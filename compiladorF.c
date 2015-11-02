@@ -39,8 +39,7 @@ void print_error(const char *error, ...) {
 
 symbol_type parse_type(const char *type) {
   return  (strcasecmp(type, "integer") == 0) ? sym_type_integer :
-          (strcasecmp(type, "boolean") == 0) ? sym_type_boolean :
-          sym_type_null;
+          (strcasecmp(type, "boolean") == 0) ? sym_type_boolean : sym_type_null;
 }
 
 char *get_symbol_type_string(symbol_type type) {
@@ -48,20 +47,29 @@ char *get_symbol_type_string(symbol_type type) {
               bool_type_str[] = "boolean",
               null_type_str[] = "null";
 
-  if(type == sym_type_integer) {
-    return int_type_str;
-  } else if(type == sym_type_boolean) {
-    return bool_type_str;
-  }
-
-  return null_type_str;
+  return  (type == sym_type_integer) ? int_type_str :
+          (type == sym_type_boolean) ? bool_type_str : null_type_str;
 }
 
-struct symbol_table *create_symbol(const char *name, symbol_feature feature) {
+char *get_symbol_feature_string(symbol_feature feature) {
+  static char variable_str[]  = "variable",
+              function_str[] = "function",
+              procedure_str[] = "procedure",
+              parameter_str[] = "parameter",
+              null_str[] = "null";
+
+  return  (feature == variable_symbol) ? variable_str :
+          (feature == function_symbol) ? function_str :
+          (feature == procedure_symbol) ? procedure_str :
+          (feature == ref_parameter_symbol) ? parameter_str :
+          (feature == val_parameter_symbol) ? parameter_str : null_str;
+}
+
+struct symbol_table *create_symbol(const char *name, symbol_feature feature, unsigned int label) {
   struct symbol_table *sym, *chksym;
 
-  if((chksym = find_symbol(name)) != NULL && chksym->sym_lex_level == lexical_level) {
-    print_error("Simbolo \"%s\" ja definido nesse nivel lexico!", name);
+  if((chksym = find_symbol(name, null_symbol, 0)) != NULL && chksym->sym_lex_level == lexical_level) {
+    print_error("Symbol \"%s\" already defined on this lexical level!", name);
   }
 
   sym = (struct symbol_table *) malloc(sizeof(struct symbol_table));
@@ -69,14 +77,16 @@ struct symbol_table *create_symbol(const char *name, symbol_feature feature) {
   sym->sym_feature = feature;
   sym->sym_type = sym_type_null;
   sym->sym_lex_level = lexical_level;
-  sym->sym_offset = block_variables;
+  sym->sym_label = label;
+  sym->sym_nparams = 0;
+  sym->sym_params = NULL;
 
   if(sym == NULL || sym->sym_name == NULL) {
     if(sym != NULL) {
       free(sym);
     }
 
-    fprintf(stderr, "create_symbol(): Erro ao alocar memoria para simbolo \"%s\".\n", name);
+    fprintf(stderr, "create_symbol(): Cannot allocate memory for symbol \"%s\".\n", name);
     return NULL;
   }
 
@@ -85,40 +95,44 @@ struct symbol_table *create_symbol(const char *name, symbol_feature feature) {
   }
 
   sym_tb_base = sym;
-  ++block_variables;
+
+  if(feature == variable_symbol) {
+    sym->sym_offset = block_variables++;
+  } 
+
   return sym;
 }
 
-struct symbol_table *find_symbol(const char *name) {
+struct symbol_table *find_symbol(const char *name, symbol_feature feature, int must_exist) {
   struct symbol_table *sym;
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
-    if(strcmp(sym->sym_name, name) == 0) {
+    if(strcmp(sym->sym_name, name) == 0 && sym->sym_lex_level <= lexical_level) {
+      if(must_exist != 0 && feature != null_symbol && sym->sym_feature != feature) {
+        print_error("Symbol \"%s\" is not a %s.", get_symbol_feature_string(feature)); 
+      }
+
       return sym;
     }
+  }
+
+  if(must_exist != 0) {
+    print_error("Undefined symbol \"%s\".\n", name);
   }
 
   return NULL;
 }
 
-char *get_symbol_reference(const char *name) {
-  static char ref[MAX_SYMBOL_REF];
+struct symbol_table *find_variable_or_parameter(const char *name) {
   struct symbol_table *sym;
 
-  sym = find_symbol(name);
-
-  if(sym != NULL) {
-    if(sym->sym_feature == variable_symbol) {
-      snprintf(ref, sizeof ref, "%u %u", sym->sym_lex_level, sym->sym_offset);
-      return ref;
+  for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
+    if((strcmp(sym->sym_name, name) == 0) && sym->sym_lex_level <= lexical_level && (sym->sym_feature == variable_symbol || sym->sym_feature == val_parameter_symbol || sym->sym_feature == ref_parameter_symbol)) {
+      return sym;
     }
   }
 
-  print_error("Simbolo indefinido: \"%s\".\n", name);
-
-  /* Nunca executado */
-  snprintf(ref, sizeof ref, "<null>");
-  return ref;
+  return NULL;
 }
 
 void set_last_symbols_type(unsigned int nsymbols, symbol_type tsym) {
@@ -130,63 +144,97 @@ void set_last_symbols_type(unsigned int nsymbols, symbol_type tsym) {
   }
 }
 
+void set_parameters_offset(unsigned int nsymbols) {
+  struct symbol_table *sym;
+  unsigned int i;
+  int offset = -4;
+
+  for(i = 0, sym = sym_tb_base; i < nsymbols && sym != NULL; ++i, sym = sym->sym_next) {
+    sym->sym_offset = offset;
+    --offset;
+  }
+}
+
 void print_symbols_table() {
   struct symbol_table *sym;
 
   fprintf(stdout, "\n\nLEX - OFF - FEATURE  - TYPE - NAME\n");
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
-    fprintf(stdout, "%3u - %3u - ", sym->sym_lex_level, sym->sym_offset);
-
-    if(sym->sym_feature == function_symbol) {
-      fprintf(stdout, "function - ");
-    } else if(sym->sym_feature == variable_symbol) {
-      fprintf(stdout, "variable - ");
-    } else {
-      fprintf(stdout, "  null   - ");
-    }
-
-    if(sym->sym_type == sym_type_integer) {
-      fprintf(stdout, "INT  - ");
-    } else if(sym->sym_type == sym_type_boolean) {
-      fprintf(stdout, "BOOL - ");
-    } else {
-      fprintf(stdout, "NULL - ");
-    }
-
-    fprintf(stdout, "%s\n", sym->sym_name);
+    fprintf(stdout, "%3u - %3d - %s - %s - %s\n",
+                                      sym->sym_lex_level,
+                                      sym->sym_offset,
+                                      get_symbol_feature_string(sym->sym_feature),
+                                      get_symbol_type_string(sym->sym_type),
+                                      sym->sym_name);
   }
 
   fprintf(stdout, "\n");
 }
 
-unsigned int free_level_symbols() {
-  struct symbol_table *sym, *aux_sym;
-  unsigned int var_count = 0;
+void free_level_symbols(unsigned int level) {
+  struct symbol_table *sym, *free_sym, *prev_sym;
+  unsigned int dmem_count = 0;
 
+  prev_sym = NULL;
   sym = sym_tb_base;
 
-  while(sym != NULL && sym->sym_lex_level == lexical_level) {
-    if(sym->sym_feature == variable_symbol) {
-      ++var_count;
+  while(sym != NULL) {
+    free_sym = NULL;
+
+    switch(sym->sym_feature) {
+      case variable_symbol:
+        if(sym->sym_lex_level >= level) {
+          free_sym = sym;
+          ++dmem_count;
+        }
+
+        break;
+
+      case val_parameter_symbol:
+      case ref_parameter_symbol:
+        if(sym->sym_lex_level >= level) {
+          free_sym = sym;
+        }
+
+        break;
+
+      case procedure_symbol:
+      case function_symbol:
+        if(sym->sym_lex_level > level) {
+          free_sym = sym;
+        }
     }
 
-    aux_sym = sym;
+    if(free_sym == NULL) {
+      prev_sym = sym;
+    }
+
     sym = sym->sym_next;
 
-    if(aux_sym->sym_name != NULL) {
-      free(aux_sym->sym_name);
-    }
+    if(free_sym != NULL) {
+      if(prev_sym != NULL) {
+        prev_sym->sym_next = sym->sym_next;
+      } else {
+        sym_tb_base = sym->sym_next;
+      }
 
-    free(aux_sym);
+      if(free_sym->sym_name != NULL) {
+        free(free_sym->sym_name);
+      }
+
+      free(free_sym);
+    }
   }
 
-  sym_tb_base = sym;
-  return var_count;
+  if(dmem_count > 0) {
+    generate_code(NULL, "DMEM %u", dmem_count);
+  }
 }
 
 void free_symbols() {
   struct symbol_table *sym, *aux_sym;
+  struct param_list *prev_params;
 
   sym = sym_tb_base;
 
@@ -196,6 +244,12 @@ void free_symbols() {
 
     if(aux_sym->sym_name != NULL) {
       free(aux_sym->sym_name);
+    }
+
+    while(aux_sym->sym_params != NULL) {
+      prev_params = aux_sym->sym_params;
+      aux_sym->sym_params = aux_sym->sym_params->param_next;
+      free(prev_params);
     }
 
     free(aux_sym);
@@ -289,6 +343,57 @@ void transfer_stack_type(struct stack_node **source, struct stack_node **dest) {
   ipush(dest, ipop(source));
 }
 
+void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, pass_option opt) {
+  struct param_list *p, *last;
+  unsigned int i;
+
+  p = (struct param_list *) malloc(sizeof(struct param_list));
+
+  if(p != NULL) {
+    p->param_type = type;
+    p->param_option = opt;
+    p->param_count = nparams;
+    p->param_next = NULL;
+
+    if(*dest == NULL) {
+      *dest = p;
+    } else {
+      for(last = *dest; last->param_next != NULL; last = last->param_next);
+      last->param_next = p;
+    }
+  }
+}
+
+pass_option get_param_option(struct param_list *p, unsigned int param_no) {
+  unsigned int i;
+
+  for(i = 0; i + p->param_count < param_no; ++i) {
+    if(p->param_next == NULL) {
+      print_error("Unexpected parameter for function (%d).\n", param_no);
+    }
+
+    p = p->param_next;
+  }
+
+  return p->param_option;
+}
+
+void check_param(struct param_list *p, unsigned int param_no, symbol_type type) {
+  unsigned int i;
+
+  for(i = 0; i + p->param_count < param_no; ++i) {
+    if(p->param_next == NULL) {
+      print_error("Unexpected parameter for function (%d).\n", param_no);
+    }
+
+    p = p->param_next;
+  }
+
+  if(p->param_type != type) {
+    print_error("Invalid parameter %d type, expected '%s', found '%s'.\n", param_no, get_symbol_type_string(p->param_type), get_symbol_type_string(type));
+  }
+}
+
 unsigned int get_next_label() {
   static unsigned int current_label = 0;
   return current_label++;
@@ -300,7 +405,7 @@ void generate_label(unsigned int label) {
   generate_code(label_str, "NADA");
 }
 
-const char *get_label_string(unsigned int label) {
+char *get_label_string(unsigned int label) {
   static char label_str[MAX_LABEL];
   snprintf(label_str, sizeof label_str, "R%s%u", (label < 10) ? "0" : "", label);
   return label_str;

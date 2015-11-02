@@ -21,34 +21,139 @@
 
 %%
 
-program :  
-  { generate_code(NULL, "INPP"); }
-  PROGRAM IDENT PARENTHESES_OPEN ident_list PARENTHESES_CLOSE SEMICOLON block DOT
-  { generate_code(NULL, "PARA"); }
+program : {
+    generate_code(NULL, "INPP");
+  }
+  PROGRAM IDENT PARENTHESES_OPEN ident_list PARENTHESES_CLOSE SEMICOLON block DOT {
+    generate_code(NULL, "PARA");
+  }
 ;
 
 block :
   variable_declaration_part
-  composed_instructions
-  { generate_code(NULL, "DMEM %u", free_level_symbols()); } 
+  subroutine_declaration_part
+  composed_instructions {
+    free_level_symbols(lexical_level);
+  } 
+;
+
+/* Declaração de subrotinas */
+subroutine_declaration_part :
+  { subroutine_label = get_next_label();
+    generate_code(NULL, "DSVS %s", get_label_string(subroutine_label));
+    uipush(&subroutine_stack, subroutine_label); }
+  declare_subroutines_block
+  { generate_label(uipop(&subroutine_stack)); }
+;
+
+declare_subroutines_block :
+  FUNCTION IDENT {
+    ++lexical_level;
+    subroutine_label = get_next_label();
+    subroutine_ptr = create_symbol(token, function_symbol, subroutine_label);
+    generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
+  }
+  PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
+    subroutine_ptr->sym_nparams = block_parameters;
+  }
+  COLON type {
+    subroutine_ptr->sym_type = symbol_type_id;
+    push(&subroutine_stack, subroutine_ptr);
+  }
+  SEMICOLON block {
+    subroutine_ptr = pop(&subroutine_stack);
+    generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
+    --lexical_level;
+  }
+  | /* OR */
+  PROCEDURE IDENT {
+    ++lexical_level;
+    subroutine_label = get_next_label();
+    subroutine_ptr = create_symbol(token, function_symbol, subroutine_label);
+    generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
+  }
+  PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
+    subroutine_ptr->sym_type = sym_type_null;
+    subroutine_ptr->sym_nparams = block_parameters;
+    push(&subroutine_stack, subroutine_ptr);
+  }
+  block {
+    subroutine_ptr = pop(&subroutine_stack);
+    generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
+    --lexical_level;
+  }
+  | /* OR */
+  /* Nothing */
+;
+
+/* Declaração de parametros */
+parameter_declaration_part : {
+    block_parameters = 0;
+  }
+  parameter_block {
+    set_parameters_offset(block_parameters);
+    passed_option = copied_param;
+  }
+;
+
+parameter_block : {
+    passed_option = copied_param;
+  }
+  parameter_line { 
+    block_parameters += line_parameters;
+  }
+  parameter_block
+  | /* OR */
+  VAR {
+    passed_option = referenced_param;
+  }
+  parameter_line {
+    block_parameters += line_parameters;
+  }
+  parameter_block
+  | /* OR */
+  /* Nothing */
+;
+
+parameter_line : {
+    line_parameters = 0;
+  }
+  parameter_list COLON type {
+    set_last_symbols_type(line_parameters, symbol_type_id);
+    insert_params(&(subroutine_ptr->sym_params), line_parameters, symbol_type_id, passed_option);
+  }
+  SEMICOLON
+;
+
+parameter_list :
+  IDENT {
+    create_symbol(token, (passed_option == referenced_param) ? ref_parameter_symbol : val_parameter_symbol, 0);
+    ++line_parameters;
+  }
+  | /* OR */
+  parameter_list COMMA IDENT {
+    create_symbol(token, (passed_option == referenced_param) ? ref_parameter_symbol : val_parameter_symbol, 0);
+    ++line_parameters;
+  }
 ;
 
 /* Declaração de variáveis */
 variable_declaration_part :
   { block_variables = 0; }
-  VAR declare_vars_block
+  VAR variable_block
   | /* OR */
   /* Nothing */
 ;
 
-declare_vars_block :
-  declare_vars_block declare_vars_line
+variable_block :
+  variable_line variable_block
   | /* OR */
-  declare_vars_line
+  variable_line
 ;
 
-declare_vars_line :
-  { line_variables = 0; }
+variable_line : {
+    line_variables = 0;
+  }
   variable_list COLON type  {
     set_last_symbols_type(line_variables, symbol_type_id);
     generate_code(NULL, "AMEM %u", line_variables);
@@ -56,20 +161,21 @@ declare_vars_line :
   SEMICOLON
 ;
 
-type :
-  IDENT {
-    symbol_type_id = parse_type(token);
-  }
-;
-
 variable_list :
-  variable_list COMMA
-  IDENT {
-    create_symbol(token, variable_symbol), ++line_variables;
+  variable_list COMMA IDENT {
+    create_symbol(token, variable_symbol, 0);
+    ++line_variables;
   }
   | /* OR */
   IDENT {
-    create_symbol(token, variable_symbol), ++line_variables;
+    create_symbol(token, variable_symbol, 0);
+    ++line_variables;
+  }
+;
+
+type :
+  IDENT {
+    symbol_type_id = parse_type(token);
   }
 ;
 
@@ -81,8 +187,7 @@ ident_list :
 
 variable :
   IDENT {
-    strncpy(variable_name, token, sizeof variable_name);
-    variable_reference = get_symbol_reference(token);
+    variable_ptr = find_variable_or_parameter(token);
   }
 ;
 
@@ -100,7 +205,7 @@ instructions :
 instruction :
   set_instruction
   | /* OR */
-  function_call
+  procedure_call
   | /* OR */
   conditional_instruction
   | /* OR */
@@ -108,20 +213,44 @@ instruction :
 ;
 
 set_instruction :
-  variable SET expression {
-    process_stack_type(&expr_stack, find_symbol(variable_name)->sym_type, NULL);
-    generate_code(NULL, "ARMZ %s", variable_reference);
+  variable {
+    push(&variable_stack, variable_ptr);
+  }
+  SET expression {
+    variable_ptr = pop(&variable_stack);
+    process_stack_type(&expr_stack, variable_ptr->sym_type, NULL);
+
+    if(variable_ptr->sym_feature == ref_parameter_symbol) {
+      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    } else {
+      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    }
+  }
+;
+
+procedure_call :
+  IDENT {
+    subroutine_ptr = find_symbol(token, procedure_symbol, 1);
+  }
+  PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
+    generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
 ;
 
 function_call :
   IDENT {
-    function_reference = get_symbol_reference(token);
+    subroutine_ptr = find_symbol(token, function_symbol, 1);
+    push(&subroutine_stack, subroutine_ptr);
   }
-  PARENTHESES_OPEN expression_list PARENTHESES_CLOSE
+  PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
+    subroutine_ptr = pop(&subroutine_stack);
+    generate_code(NULL, "AMEM 1");
+    generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
+  }
+  SEMICOLON
 ;
 
-if_statement:
+if_statement :
   IF expression {
     if_not_label = get_next_label();
     process_stack_type(&expr_stack, sym_type_boolean, NULL);
@@ -187,7 +316,26 @@ expression :
   expression relation_operator {
     relation = symbol;
   }
-  simple_expression
+  simple_expression {
+    process_stack_type(&expr_stack, sym_type_integer, NULL);
+    process_stack_type(&expr_stack, sym_type_integer, NULL);
+
+    if(relation == sym_equal) {
+      generate_code(NULL, "CMIG");
+    } else if(relation == sym_diff) {
+      generate_code(NULL, "CMDG");
+    } else if(relation == sym_less_than) {
+      generate_code(NULL, "CMME");
+    } else if(relation == sym_less_or_equal_than) {
+      generate_code(NULL, "CMEG");
+    } else if(relation == sym_higher_than) {
+      generate_code(NULL, "CMMA");
+    } else if(relation == sym_higher_or_equal_than) {
+      generate_code(NULL, "CMAG");
+    }
+
+    ipush(&expr_stack, (int) sym_type_boolean);
+  }
 ;
 
 simple_expression :
@@ -254,13 +402,22 @@ factor :
   }
   | /* OR */
   variable {
-    ipush(&factor_stack, (int) find_symbol(variable_name)->sym_type);
-    generate_code(NULL, "CRVL %s", variable_reference);
+    ipush(&factor_stack, (int) variable_ptr->sym_type);
+
+    if(passed_option == referenced_param) {
+      generate_code(NULL, "CREN %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    } else {
+      generate_code(NULL, "CRVL %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    }
   }
   | /* OR */
   CONSTANT {
     ipush(&factor_stack, (int) sym_type_integer);
     generate_code(NULL, "CRCT %s", token);
+  }
+  | /* OR */
+  function_call {
+    ipush(&factor_stack, (int) subroutine_ptr->sym_type);
   }
   | /* OR */
   TRUE {
@@ -273,17 +430,31 @@ factor :
     generate_code(NULL, "CRCT 0");
   }
   | /* OR */
-  function_call
-  | /* OR */
   PARENTHESES_OPEN expression PARENTHESES_CLOSE {
     transfer_stack_type(&expr_stack, &factor_stack);
   }
 ;
 
-expression_list:
-  expression
+expression_list : { 
+    line_parameters = 0;
+    passed_option = get_param_option(subroutine_ptr->sym_params, line_parameters);
+  }
+  expression {
+    check_param(subroutine_ptr->sym_params, line_parameters++, ipop(&expr_stack));
+    passed_option = copied_param;
+  }
+  expr_comma_separated
   | /* OR */
-  expression COMMA expression
+  /* Nothing */
+;
+
+expr_comma_separated :
+  COMMA expression {
+    check_param(subroutine_ptr->sym_params, line_parameters++, ipop(&expr_stack));
+  }
+  expr_comma_separated
+  | /* OR */
+  /* Nothing */
 ;
 
 
