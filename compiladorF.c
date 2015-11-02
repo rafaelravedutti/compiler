@@ -107,7 +107,7 @@ struct symbol_table *find_symbol(const char *name, symbol_feature feature, int m
   struct symbol_table *sym;
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
-    if(strcmp(sym->sym_name, name) == 0 && sym->sym_lex_level <= lexical_level) {
+    if(strcmp(sym->sym_name, name) == 0) {
       if(must_exist != 0 && feature != null_symbol && sym->sym_feature != feature) {
         print_error("Symbol \"%s\" is not a %s.", get_symbol_feature_string(feature)); 
       }
@@ -214,9 +214,9 @@ void free_level_symbols(unsigned int level) {
 
     if(free_sym != NULL) {
       if(prev_sym != NULL) {
-        prev_sym->sym_next = sym->sym_next;
+        prev_sym->sym_next = sym;
       } else {
-        sym_tb_base = sym->sym_next;
+        sym_tb_base = sym;
       }
 
       if(free_sym->sym_name != NULL) {
