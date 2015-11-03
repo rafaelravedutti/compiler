@@ -235,6 +235,7 @@ procedure_call :
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
     generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
+  SEMICOLON
 ;
 
 function_call :
@@ -247,7 +248,6 @@ function_call :
     generate_code(NULL, "AMEM 1");
     generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
-  SEMICOLON
 ;
 
 if_statement :
