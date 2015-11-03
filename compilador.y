@@ -232,7 +232,6 @@ set_instruction :
 
 procedure_call :
   IDENT {
-    print_symbols_table();
     subroutine_ptr = find_symbol(token, procedure_symbol, 1);
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
