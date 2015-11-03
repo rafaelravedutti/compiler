@@ -65,11 +65,12 @@ declare_subroutines_block :
     generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
     --lexical_level;
   }
+  declare_subroutines_block
   | /* OR */
   PROCEDURE IDENT {
     ++lexical_level;
     subroutine_label = get_next_label();
-    subroutine_ptr = create_symbol(token, function_symbol, subroutine_label);
+    subroutine_ptr = create_symbol(token, procedure_symbol, subroutine_label);
     generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
   }
   PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
@@ -77,11 +78,12 @@ declare_subroutines_block :
     subroutine_ptr->sym_nparams = block_parameters;
     push(&subroutine_stack, subroutine_ptr);
   }
-  block {
+  SEMICOLON block {
     subroutine_ptr = pop(&subroutine_stack);
     generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
     --lexical_level;
   }
+  declare_subroutines_block
   | /* OR */
   /* Nothing */
 ;
@@ -230,6 +232,7 @@ set_instruction :
 
 procedure_call :
   IDENT {
+    print_symbols_table();
     subroutine_ptr = find_symbol(token, procedure_symbol, 1);
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
