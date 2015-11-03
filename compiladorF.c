@@ -127,7 +127,7 @@ struct symbol_table *find_variable_or_parameter(const char *name) {
   struct symbol_table *sym;
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
-    if((strcmp(sym->sym_name, name) == 0) && sym->sym_lex_level <= lexical_level && (sym->sym_feature == variable_symbol || sym->sym_feature == val_parameter_symbol || sym->sym_feature == ref_parameter_symbol)) {
+    if(strcmp(sym->sym_name, name) == 0 && (sym->sym_feature == variable_symbol || sym->sym_feature == val_parameter_symbol || sym->sym_feature == ref_parameter_symbol)) {
       return sym;
     }
   }
@@ -343,15 +343,15 @@ void transfer_stack_type(struct stack_node **source, struct stack_node **dest) {
   ipush(dest, ipop(source));
 }
 
-void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, pass_option opt) {
+void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, symbol_feature feature) {
   struct param_list *p, *last;
   unsigned int i;
 
   p = (struct param_list *) malloc(sizeof(struct param_list));
 
   if(p != NULL) {
+    p->param_feature = feature;
     p->param_type = type;
-    p->param_option = opt;
     p->param_count = nparams;
     p->param_next = NULL;
 
@@ -364,7 +364,7 @@ void insert_params(struct param_list **dest, unsigned int nparams, symbol_type t
   }
 }
 
-pass_option get_param_option(struct param_list *p, unsigned int param_no) {
+symbol_feature get_param_feature(struct param_list *p, unsigned int param_no) {
   unsigned int i;
 
   for(i = 0; i + p->param_count < param_no; ++i) {
@@ -375,7 +375,7 @@ pass_option get_param_option(struct param_list *p, unsigned int param_no) {
     p = p->param_next;
   }
 
-  return p->param_option;
+  return p->param_feature;
 }
 
 void check_param(struct param_list *p, unsigned int param_no, symbol_type type) {

@@ -36,11 +36,6 @@ typedef enum {
   sym_type_boolean
 } symbol_type;
 
-typedef enum {
-  copied_param,
-  referenced_param
-} pass_option;
-
 struct symbol_table {
   char *sym_name;
   symbol_feature sym_feature;
@@ -54,8 +49,8 @@ struct symbol_table {
 };
 
 struct param_list {
+  symbol_feature param_feature;
   symbol_type param_type;
-  pass_option param_option;
   unsigned int param_count;
   struct param_list *param_next;
 };
@@ -78,7 +73,7 @@ unsigned int while_inner_label, while_outter_label;
 unsigned int subroutine_label;
 symbol_name symbol, relation;
 symbol_type symbol_type_id;
-pass_option passed_option;
+symbol_feature param_feature;
 
 /* Variáveis externas */
 extern unsigned int lexical_level;
@@ -118,8 +113,8 @@ void process_stack_type(struct stack_node **stack, symbol_type type, struct stac
 void transfer_stack_type(struct stack_node **source, struct stack_node **dest);
 
 /* Funções de fila */
-void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, pass_option opt);
-pass_option get_param_option(struct param_list *p, unsigned int param_no);
+void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, symbol_feature feature);
+symbol_feature get_param_feature(struct param_list *p, unsigned int param_no);
 void check_param(struct param_list *p, unsigned int param_no, symbol_type type);
 
 /* Funções de rótulos */

@@ -92,12 +92,12 @@ parameter_declaration_part : {
   }
   parameter_block {
     set_parameters_offset(block_parameters);
-    passed_option = copied_param;
+    param_feature = val_parameter_symbol;
   }
 ;
 
 parameter_block : {
-    passed_option = copied_param;
+    param_feature = val_parameter_symbol;
   }
   parameter_line { 
     block_parameters += line_parameters;
@@ -105,7 +105,7 @@ parameter_block : {
   parameter_block
   | /* OR */
   VAR {
-    passed_option = referenced_param;
+    param_feature = ref_parameter_symbol;
   }
   parameter_line {
     block_parameters += line_parameters;
@@ -120,19 +120,19 @@ parameter_line : {
   }
   parameter_list COLON type {
     set_last_symbols_type(line_parameters, symbol_type_id);
-    insert_params(&(subroutine_ptr->sym_params), line_parameters, symbol_type_id, passed_option);
+    insert_params(&(subroutine_ptr->sym_params), line_parameters, symbol_type_id, param_feature);
   }
   SEMICOLON
 ;
 
 parameter_list :
   IDENT {
-    create_symbol(token, (passed_option == referenced_param) ? ref_parameter_symbol : val_parameter_symbol, 0);
+    create_symbol(token, param_feature, 0);
     ++line_parameters;
   }
   | /* OR */
   parameter_list COMMA IDENT {
-    create_symbol(token, (passed_option == referenced_param) ? ref_parameter_symbol : val_parameter_symbol, 0);
+    create_symbol(token, param_feature, 0);
     ++line_parameters;
   }
 ;
@@ -404,7 +404,7 @@ factor :
   variable {
     ipush(&factor_stack, (int) variable_ptr->sym_type);
 
-    if(passed_option == referenced_param) {
+    if(param_feature == ref_parameter_symbol) {
       generate_code(NULL, "CREN %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     } else {
       generate_code(NULL, "CRVL %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
@@ -437,11 +437,11 @@ factor :
 
 expression_list : { 
     line_parameters = 0;
-    passed_option = get_param_option(subroutine_ptr->sym_params, line_parameters);
+    param_feature = get_param_feature(subroutine_ptr->sym_params, line_parameters);
   }
   expression {
     check_param(subroutine_ptr->sym_params, line_parameters++, ipop(&expr_stack));
-    passed_option = copied_param;
+    param_feature = val_parameter_symbol;
   }
   expr_comma_separated
   | /* OR */
