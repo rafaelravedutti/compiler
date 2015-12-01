@@ -46,43 +46,44 @@ subroutine_declaration_part :
   { generate_label(uipop(&subroutine_stack)); }
 ;
 
-declare_subroutines_block :
-  FUNCTION IDENT {
+subroutine_declaration :
+  IDENT {
     ++lexical_level;
     subroutine_label = get_next_label();
-    subroutine_ptr = create_symbol(token, function_symbol, subroutine_label);
+    subroutine_ptr = create_symbol(token, subroutine_feature, subroutine_label);
     generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
   }
   PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
     subroutine_ptr->sym_nparams = block_parameters;
-  }
-  COLON type {
-    subroutine_ptr->sym_type = symbol_type_id;
     push(&subroutine_stack, subroutine_ptr);
   }
+;
+
+subroutine_body :
   SEMICOLON block {
     subroutine_ptr = pop(&subroutine_stack);
     generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
     --lexical_level;
   }
+;
+
+declare_subroutines_block :
+  FUNCTION {
+    subroutine_feature = function_symbol;
+  }
+  subroutine_declaration COLON type {
+    subroutine_ptr->sym_type = symbol_type_id;
+  }
+  subroutine_body
   declare_subroutines_block
   | /* OR */
-  PROCEDURE IDENT {
-    ++lexical_level;
-    subroutine_label = get_next_label();
-    subroutine_ptr = create_symbol(token, procedure_symbol, subroutine_label);
-    generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
+  PROCEDURE {
+    subroutine_feature = procedure_symbol;
   }
-  PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
+  subroutine_declaration {
     subroutine_ptr->sym_type = sym_type_null;
-    subroutine_ptr->sym_nparams = block_parameters;
-    push(&subroutine_stack, subroutine_ptr);
   }
-  SEMICOLON block {
-    subroutine_ptr = pop(&subroutine_stack);
-    generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
-    --lexical_level;
-  }
+  subroutine_body
   declare_subroutines_block
   | /* OR */
   /* Nothing */
@@ -242,11 +243,11 @@ procedure_call :
 function_call :
   IDENT {
     subroutine_ptr = find_symbol(token, function_symbol, 1);
+    generate_code(NULL, "AMEM 1");
     push(&subroutine_stack, subroutine_ptr);
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
     subroutine_ptr = pop(&subroutine_stack);
-    generate_code(NULL, "AMEM 1");
     generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
 ;

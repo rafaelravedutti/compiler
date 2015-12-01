@@ -73,7 +73,7 @@ unsigned int while_inner_label, while_outter_label;
 unsigned int subroutine_label;
 symbol_name symbol, relation;
 symbol_type symbol_type_id;
-symbol_feature param_feature;
+symbol_feature param_feature, subroutine_feature;
 
 /* Variáveis externas */
 extern unsigned int lexical_level;
