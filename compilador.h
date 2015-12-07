@@ -26,6 +26,7 @@ typedef enum {
   variable_symbol,
   function_symbol,
   procedure_symbol,
+  label_symbol,
   val_parameter_symbol,
   ref_parameter_symbol 
 } symbol_feature;

@@ -30,11 +30,31 @@ program : {
 ;
 
 block :
+  label_declaration_part
   variable_declaration_part
   subroutine_declaration_part
   composed_instructions {
     free_level_symbols(lexical_level);
   } 
+;
+
+/* Declaração de rótulos */
+label_declaration_part :
+  LABEL label_list
+  | /* OR */
+  /* Nothing */
+;
+
+label_list :
+  CONSTANT {
+    create_symbol(token, label_symbol, get_next_label());
+  }
+  COMMA label_list
+  | /* OR */
+  CONSTANT {
+    create_symbol(token, label_symbol, get_next_label());
+  }
+  SEMICOLON
 ;
 
 /* Declaração de subrotinas */
@@ -213,6 +233,10 @@ instruction :
   conditional_instruction
   | /* OR */
   loop_instruction
+  | /* OR */
+  goto_instruction
+  | /* OR */
+  label_entry
 ;
 
 set_instruction :
@@ -296,6 +320,19 @@ loop_instruction :
     generate_code(NULL, "DSVS %s", get_label_string(while_inner_label));
     generate_label(while_outter_label);
   }
+;
+
+goto_instruction :
+  GOTO CONSTANT {
+    generate_code(NULL, "DVSR %s,%u,%u", get_label_string(find_symbol(token, label_symbol, 1)->sym_label), find_symbol(token, label_symbol, 1)->sym_lex_level, lexical_level);
+  }
+;
+
+label_entry :
+  CONSTANT {
+    generate_code(get_label_string(find_symbol(token, label_symbol, 1)->sym_label), "ENRT %u,%u", lexical_level, (subroutine_ptr != NULL) ? subroutine_ptr->sym_nparams : 0);
+  }
+  COLON instruction
 ;
 
 relation_operator :

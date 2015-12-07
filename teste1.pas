@@ -1,5 +1,5 @@
 program exemplo75 (input, output);
-
+label 100;
 var m, n :  integer;
 
 function func1() : integer;
@@ -37,5 +37,11 @@ begin
 
   n := func1();
   proc1();
+
+100:
+  m := 18;
+
+  goto 100;
+
 end.
 
