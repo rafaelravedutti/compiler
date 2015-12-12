@@ -229,6 +229,14 @@ or {
   process_symbol(sym_mod, MOD);
 }
 
+write {
+  process_symbol(sym_write, WRITE);
+}
+
+read {
+  process_symbol(sym_read, READ);
+}
+
 {identifier} {
   process_token(sym_identifier, IDENT);
 }

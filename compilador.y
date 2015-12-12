@@ -15,6 +15,7 @@
 %token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
 %token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
 %token AND OR SUM SUB TIMES DIV MOD TRUE FALSE
+%token WRITE READ
 
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
@@ -237,6 +238,10 @@ instruction :
   goto_instruction
   | /* OR */
   label_entry
+  | /* OR */
+  write_instruction
+  | /* OR */
+  read_instruction
 ;
 
 set_instruction :
@@ -334,6 +339,49 @@ label_entry :
   }
   COLON instruction
 ;
+
+write_instruction :
+  WRITE PARENTHESES_OPEN write_expression_list PARENTHESES_CLOSE
+;
+
+write_expression_list :
+  expression {
+    generate_code(NULL, "IMPR");
+  }
+  COMMA write_expression_list
+  | /* OR */
+  expression {
+    generate_code(NULL, "IMPR");
+  }
+;
+
+read_instruction :
+  READ PARENTHESES_OPEN read_variable_list PARENTHESES_CLOSE
+;
+
+read_variable_list :
+  variable {
+    generate_code(NULL, "LEIT");
+
+    if(variable_ptr->sym_feature == ref_parameter_symbol) {
+      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    } else {
+      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    }
+  }
+  COMMA read_variable_list
+  | /* OR */
+  variable {
+    generate_code(NULL, "LEIT");
+
+    if(variable_ptr->sym_feature == ref_parameter_symbol) {
+      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    } else {
+      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    }
+  }
+;
+
 
 relation_operator :
   EQUAL
