@@ -19,7 +19,7 @@ typedef enum {
   sym_less_or_equal_than, sym_higher_or_equal_than,
   sym_and, sym_or, sym_sum, sym_sub, sym_times,
   sym_div, sym_mod, sym_true, sym_false,
-  sym_write, sym_read
+  sym_write, sym_read, sym_div_int
 } symbol_name;
 
 typedef enum {

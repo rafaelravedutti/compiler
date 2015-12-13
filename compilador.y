@@ -15,7 +15,7 @@
 %token CASE IN CONSTANT EQUAL DIFF LESS_THAN HIGHER_THAN
 %token LESS_OR_EQUAL_THAN HIGHER_OR_EQUAL_THAN
 %token AND OR SUM SUB TIMES DIV MOD TRUE FALSE
-%token WRITE READ
+%token WRITE READ DIV_INT
 
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
@@ -67,15 +67,24 @@ subroutine_declaration_part :
   { generate_label(uipop(&subroutine_stack)); }
 ;
 
-subroutine_declaration :
+subroutine_ident :
   IDENT {
     ++lexical_level;
     subroutine_label = get_next_label();
     subroutine_ptr = create_symbol(token, subroutine_feature, subroutine_label);
     generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
   }
-  PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
+;
+
+subroutine_declaration :
+  subroutine_ident PARENTHESES_OPEN parameter_declaration_part PARENTHESES_CLOSE {
     subroutine_ptr->sym_nparams = block_parameters;
+    subroutine_ptr->sym_offset = -(block_parameters + 4); 
+    push(&subroutine_stack, subroutine_ptr);
+  }
+  | /* OR */
+  subroutine_ident {
+    subroutine_ptr->sym_nparams = 0;
     push(&subroutine_stack, subroutine_ptr);
   }
 ;
@@ -83,9 +92,10 @@ subroutine_declaration :
 subroutine_body :
   SEMICOLON block {
     subroutine_ptr = pop(&subroutine_stack);
-    generate_code(NULL, "RTPR %u,%u", lexical_level, subroutine_ptr->sym_nparams);
+    generate_code(NULL, "RTPR %u, %u", lexical_level, subroutine_ptr->sym_nparams);
     --lexical_level;
   }
+  SEMICOLON
 ;
 
 declare_subroutines_block :
@@ -118,25 +128,28 @@ parameter_declaration_part : {
     set_parameters_offset(block_parameters);
     param_feature = val_parameter_symbol;
   }
+  | /* OR */
+  /* Nothing */
 ;
 
-parameter_block : {
-    param_feature = val_parameter_symbol;
-  }
-  parameter_line { 
-    block_parameters += line_parameters;
-  }
-  parameter_block
-  | /* OR */
+parameter_type_declaration :
   VAR {
     param_feature = ref_parameter_symbol;
   }
-  parameter_line {
-    block_parameters += line_parameters;
-  }
-  parameter_block
   | /* OR */
   /* Nothing */
+  { param_feature = val_parameter_symbol; }
+;
+
+parameter_block :
+  parameter_type_declaration parameter_line {
+    block_parameters += line_parameters;
+  }
+  SEMICOLON parameter_block
+  | /* OR */
+  parameter_type_declaration parameter_line {
+    block_parameters += line_parameters;
+  }
 ;
 
 parameter_line : {
@@ -146,7 +159,6 @@ parameter_line : {
     set_last_symbols_type(line_parameters, symbol_type_id);
     insert_params(&(subroutine_ptr->sym_params), line_parameters, symbol_type_id, param_feature);
   }
-  SEMICOLON
 ;
 
 parameter_list :
@@ -211,16 +223,26 @@ ident_list :
 
 variable :
   IDENT {
-    variable_ptr = find_variable_or_parameter(token);
+    if((variable_ptr = find_variable_or_parameter(token)) == NULL) {
+      variable_ptr = find_symbol(token, function_symbol, 1);
+    }
   }
 ;
 
 /* Comandos */
+simple_or_composed_instructions :
+  instruction
+  | /* OR */
+  composed_instructions
+;
+
 composed_instructions :
   T_BEGIN instructions T_END 
 ;
 
 instructions :
+  instruction
+  | /* OR */
   instruction SEMICOLON instructions
   | /* OR */
   /* Nothing */
@@ -253,9 +275,9 @@ set_instruction :
     process_stack_type(&expr_stack, variable_ptr->sym_type, NULL);
 
     if(variable_ptr->sym_feature == ref_parameter_symbol) {
-      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMI %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     } else {
-      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMZ %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     }
   }
 ;
@@ -265,7 +287,12 @@ procedure_call :
     subroutine_ptr = find_symbol(token, procedure_symbol, 1);
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
-    generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
+    generate_code(NULL, "CHPR %s, %d", get_label_string(subroutine_ptr->sym_label), lexical_level);
+  }
+  | /* OR */
+  IDENT {
+    subroutine_ptr = find_symbol(token, procedure_symbol, 1);
+    generate_code(NULL, "CHPR %s, %d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
 ;
 
@@ -277,7 +304,7 @@ function_call :
   }
   PARENTHESES_OPEN expression_list PARENTHESES_CLOSE {
     subroutine_ptr = pop(&subroutine_stack);
-    generate_code(NULL, "CHPR %s,%d", get_label_string(subroutine_ptr->sym_label), lexical_level);
+    generate_code(NULL, "CHPR %s, %d", get_label_string(subroutine_ptr->sym_label), lexical_level);
   }
 ;
 
@@ -288,7 +315,7 @@ if_statement :
     generate_code(NULL, "DSVF %s", get_label_string(if_not_label));
     uipush(&if_stack, if_not_label);
   }
-  THEN composed_instructions
+  THEN simple_or_composed_instructions
 ;
 
 conditional_instruction :
@@ -302,7 +329,7 @@ conditional_instruction :
     generate_label(uipop(&if_stack));
     uipush(&if_stack, if_label);
   }
-  composed_instructions {
+  simple_or_composed_instructions {
     generate_label(uipop(&if_stack));
   }
 ;
@@ -319,7 +346,7 @@ loop_instruction :
     uipush(&while_stack, while_inner_label);
     uipush(&while_stack, while_outter_label);
   }
-  DO composed_instructions {
+  DO simple_or_composed_instructions {
     while_outter_label = uipop(&while_stack);
     while_inner_label = uipop(&while_stack);
     generate_code(NULL, "DSVS %s", get_label_string(while_inner_label));
@@ -329,7 +356,7 @@ loop_instruction :
 
 goto_instruction :
   GOTO CONSTANT {
-    generate_code(NULL, "DVSR %s,%u,%u", get_label_string(find_symbol(token, label_symbol, 1)->sym_label), find_symbol(token, label_symbol, 1)->sym_lex_level, lexical_level);
+    generate_code(NULL, "DVSR %s, %u, %u", get_label_string(find_symbol(token, label_symbol, 1)->sym_label), find_symbol(token, label_symbol, 1)->sym_lex_level, lexical_level);
   }
 ;
 
@@ -364,9 +391,9 @@ read_variable_list :
     generate_code(NULL, "LEIT");
 
     if(variable_ptr->sym_feature == ref_parameter_symbol) {
-      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMI %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     } else {
-      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMZ %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     }
   }
   COMMA read_variable_list
@@ -375,13 +402,12 @@ read_variable_list :
     generate_code(NULL, "LEIT");
 
     if(variable_ptr->sym_feature == ref_parameter_symbol) {
-      generate_code(NULL, "CRVI %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMI %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     } else {
-      generate_code(NULL, "ARMZ %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      generate_code(NULL, "ARMZ %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
     }
   }
 ;
-
 
 relation_operator :
   EQUAL
@@ -448,7 +474,7 @@ simple_expression :
   simple_expression SUB term {
     process_stack_type(&expr_stack, sym_type_integer, NULL);
     process_stack_type(&term_stack, sym_type_integer, &expr_stack);
-    generate_code(NULL, "SUB");
+    generate_code(NULL, "SUBT");
   }
   | /* OR */
   simple_expression OR term {
@@ -475,6 +501,12 @@ term :
     generate_code(NULL, "DIVI");
   }
   | /* OR */
+  term DIV_INT factor {
+    process_stack_type(&term_stack, sym_type_integer, NULL);
+    process_stack_type(&factor_stack, sym_type_integer, &term_stack);
+    generate_code(NULL, "DIVI");
+  }
+  | /* OR */
   term AND factor {
     process_stack_type(&term_stack, sym_type_boolean, NULL);
     process_stack_type(&factor_stack, sym_type_boolean, &term_stack);
@@ -491,10 +523,18 @@ factor :
   variable {
     ipush(&factor_stack, (int) variable_ptr->sym_type);
 
-    if(param_feature == ref_parameter_symbol) {
-      generate_code(NULL, "CREN %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+    if(variable_ptr->sym_feature != ref_parameter_symbol) {
+      if(param_feature == ref_parameter_symbol) {
+        generate_code(NULL, "CREN %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      } else {
+        generate_code(NULL, "CRVL %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      }
     } else {
-      generate_code(NULL, "CRVL %u,%d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      if(param_feature == ref_parameter_symbol) {
+        generate_code(NULL, "CRVL %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      } else {
+        generate_code(NULL, "CRVI %u, %d", variable_ptr->sym_lex_level, variable_ptr->sym_offset);
+      }
     }
   }
   | /* OR */
@@ -536,8 +576,12 @@ expression_list : {
 ;
 
 expr_comma_separated :
-  COMMA expression {
+  COMMA {
+    param_feature = get_param_feature(subroutine_ptr->sym_params, line_parameters);
+  }
+  expression {
     check_param(subroutine_ptr->sym_params, line_parameters++, ipop(&expr_stack));
+    param_feature = val_parameter_symbol;
   }
   expr_comma_separated
   | /* OR */

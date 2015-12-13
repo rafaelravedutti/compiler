@@ -43,7 +43,7 @@ unsigned int line_number = 1;
 
 new_line [\n]
 ignore [\t ]+
-identifier [a-zAZ][a-zAZ1-9]*
+identifier [a-zA-Z][a-zA-Z1-9]*
 number [0-9]+
 comment "(*".*"*)"
 
@@ -227,6 +227,10 @@ or {
 
 \% {
   process_symbol(sym_mod, MOD);
+}
+
+div {
+  process_symbol(sym_div_int, DIV_INT);
 }
 
 write {

@@ -157,16 +157,24 @@ void set_parameters_offset(unsigned int nsymbols) {
 
 void print_symbols_table() {
   struct symbol_table *sym;
+  struct param_list *p;
 
-  fprintf(stdout, "\n\nLEX - OFF - FEATURE  - TYPE - NAME\n");
+  fprintf(stdout, "\n\nLEX - OFF - FEATURE  - TYPE - PARAMS - NAME\n");
 
   for(sym = sym_tb_base; sym != NULL; sym = sym->sym_next) {
-    fprintf(stdout, "%3u - %3d - %s - %s - %s\n",
+    fprintf(stdout, "%3u - %3d - %s - %s ",
                                       sym->sym_lex_level,
                                       sym->sym_offset,
                                       get_symbol_feature_string(sym->sym_feature),
-                                      get_symbol_type_string(sym->sym_type),
-                                      sym->sym_name);
+                                      get_symbol_type_string(sym->sym_type));
+
+    if(sym->sym_feature == function_symbol || sym->sym_feature == procedure_symbol) {
+      for(p = sym->sym_params; p != NULL; p = p->param_next) {
+        fprintf(stdout, "%u%s ", p->param_count, (p->param_feature == val_parameter_symbol) ? "val" : "ref");
+      }
+    }
+
+    fprintf(stdout, "- %s\n", sym->sym_name);
   }
 
   fprintf(stdout, "\n");
@@ -367,7 +375,7 @@ void insert_params(struct param_list **dest, unsigned int nparams, symbol_type t
 symbol_feature get_param_feature(struct param_list *p, unsigned int param_no) {
   unsigned int i;
 
-  for(i = 0; i + p->param_count < param_no; ++i) {
+  for(i = 0; i + p->param_count <= param_no; i += p->param_count) {
     if(p->param_next == NULL) {
       print_error("Unexpected parameter for function (%d).\n", param_no);
     }
@@ -381,7 +389,7 @@ symbol_feature get_param_feature(struct param_list *p, unsigned int param_no) {
 void check_param(struct param_list *p, unsigned int param_no, symbol_type type) {
   unsigned int i;
 
-  for(i = 0; i + p->param_count < param_no; ++i) {
+  for(i = 0; i + p->param_count <= param_no; i += p->param_count) {
     if(p->param_next == NULL) {
       print_error("Unexpected parameter for function (%d).\n", param_no);
     }
