@@ -310,21 +310,26 @@ function_call :
 
 if_statement :
   IF expression {
+    if_label = get_next_label();
     if_not_label = get_next_label();
     process_stack_type(&expr_stack, sym_type_boolean, NULL);
     generate_code(NULL, "DSVF %s", get_label_string(if_not_label));
     uipush(&if_stack, if_not_label);
+    uipush(&if_stack, if_label);
   }
   THEN simple_or_composed_instructions
 ;
 
 conditional_instruction :
   if_statement %prec LOWER_THAN_ELSE {
+    if_label = uipop(&if_stack);
+    generate_code(NULL, "DSVS %s", get_label_string(if_label));
     generate_label(uipop(&if_stack));
+    generate_label(if_label);
   }
   | /* OR */
   if_statement ELSE {
-    if_label = get_next_label();
+    if_label = uipop(&if_stack);
     generate_code(NULL, "DSVS %s", get_label_string(if_label));
     generate_label(uipop(&if_stack));
     uipush(&if_stack, if_label);
@@ -356,13 +361,13 @@ loop_instruction :
 
 goto_instruction :
   GOTO CONSTANT {
-    generate_code(NULL, "DVSR %s, %u, %u", get_label_string(find_symbol(token, label_symbol, 1)->sym_label), find_symbol(token, label_symbol, 1)->sym_lex_level, lexical_level);
+    generate_code(NULL, "DSVR %s, %u, %u", get_label_string(find_symbol(token, label_symbol, 1)->sym_label), find_symbol(token, label_symbol, 1)->sym_lex_level, lexical_level);
   }
 ;
 
 label_entry :
   CONSTANT {
-    generate_code(get_label_string(find_symbol(token, label_symbol, 1)->sym_label), "ENRT %u,%u", lexical_level, (subroutine_ptr != NULL) ? subroutine_ptr->sym_nparams : 0);
+    generate_code(get_label_string(find_symbol(token, label_symbol, 1)->sym_label), "ENRT %u %u", lexical_level, (subroutine_ptr != NULL) ? subroutine_ptr->sym_nparams : 0);
   }
   COLON instruction
 ;

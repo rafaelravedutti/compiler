@@ -32,7 +32,7 @@ void print_error(const char *error, ...) {
 
   va_start(args, error);
 
-  fprintf(stderr, "Linha %d: ", line_number);
+  fprintf(stderr, "Line %d: ", line_number);
   vfprintf(stderr, error, args);
   exit(-1);
 }
