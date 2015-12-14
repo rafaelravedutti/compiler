@@ -432,9 +432,10 @@ expression :
   simple_expression
   | /* OR */
   expression relation_operator {
-    relation = symbol;
+    uipush(&relation_stack, symbol);
   }
   simple_expression {
+    relation = uipop(&relation_stack);
     process_stack_type(&expr_stack, (symbol_type) ipop(&expr_stack), NULL);
 
     if(relation == sym_equal) {

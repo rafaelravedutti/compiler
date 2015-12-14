@@ -68,6 +68,7 @@ struct symbol_table *variable_ptr, *subroutine_ptr;
 struct stack_node *expr_stack, *term_stack, *factor_stack;
 struct stack_node *if_stack, *while_stack;
 struct stack_node *variable_stack, *subroutine_stack;
+struct stack_node *relation_stack;
 unsigned int block_variables, line_variables;
 unsigned int block_parameters, line_parameters;
 unsigned int if_label, if_not_label;
