@@ -72,7 +72,7 @@ subroutine_ident :
     ++lexical_level;
     subroutine_label = get_next_label();
     subroutine_ptr = create_symbol(token, subroutine_feature, subroutine_label);
-    generate_code(get_label_string(subroutine_label), "ENPR %u", lexical_level);
+    generate_code(get_label_string(subroutine_label), "ENPR %u ", lexical_level);
   }
 ;
 
@@ -367,7 +367,7 @@ goto_instruction :
 
 label_entry :
   CONSTANT {
-    generate_code(get_label_string(find_symbol(token, label_symbol, 1)->sym_label), "ENRT %u %u", lexical_level, (subroutine_ptr != NULL) ? subroutine_ptr->sym_nparams : 0);
+    generate_code(get_label_string(find_symbol(token, label_symbol, 1)->sym_label), "ENRT %u %u ", lexical_level, (subroutine_ptr != NULL) ? subroutine_ptr->sym_nparams : 0);
   }
   COLON instruction
 ;
@@ -435,8 +435,7 @@ expression :
     relation = symbol;
   }
   simple_expression {
-    process_stack_type(&expr_stack, sym_type_integer, NULL);
-    process_stack_type(&expr_stack, sym_type_integer, NULL);
+    process_stack_type(&expr_stack, (symbol_type) ipop(&expr_stack), NULL);
 
     if(relation == sym_equal) {
       generate_code(NULL, "CMIG");

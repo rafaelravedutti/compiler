@@ -410,7 +410,7 @@ unsigned int get_next_label() {
 void generate_label(unsigned int label) {
   char label_str[MAX_LABEL];
   snprintf(label_str, sizeof label_str, "R%s%u", (label < 10) ? "0" : "", label);
-  generate_code(label_str, "NADA");
+  generate_code(label_str, "NADA ");
 }
 
 char *get_label_string(unsigned int label) {
