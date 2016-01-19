@@ -7,6 +7,7 @@
 /* Tamanho máximo de uma referência à algum símbolo no código MEPA */
 #define MAX_SYMBOL_REF    32
 
+/* Nomes de símbolos */
 typedef enum { 
   sym_program, sym_var, sym_begin, sym_end, sym_while,
   sym_do, sym_for, sym_to, sym_downto, sym_if, sym_then,
@@ -22,6 +23,7 @@ typedef enum {
   sym_write, sym_read, sym_div_int
 } symbol_name;
 
+/* Caracteristicas de símbolos */
 typedef enum {
   null_symbol = 0,
   variable_symbol,
@@ -32,12 +34,14 @@ typedef enum {
   ref_parameter_symbol 
 } symbol_feature;
 
+/* Tipos de símbolos */
 typedef enum {
   sym_type_null = 0,
   sym_type_integer,
   sym_type_boolean
 } symbol_type;
 
+/* Estrutura da tabela de símbolos */
 struct symbol_table {
   char *sym_name;
   symbol_feature sym_feature;
@@ -50,6 +54,7 @@ struct symbol_table {
   struct symbol_table *sym_next;
 };
 
+/* Lista de parâmetros */
 struct param_list {
   symbol_feature param_feature;
   symbol_type param_type;
@@ -57,6 +62,7 @@ struct param_list {
   struct param_list *param_next;
 };
 
+/* Estrutura de pilha genérica */
 struct stack_node {
   void *stack_value;
   struct stack_node *stack_next;
@@ -115,7 +121,7 @@ unsigned int uipop(struct stack_node **stack);
 void process_stack_type(struct stack_node **stack, symbol_type type, struct stack_node **dest);
 void transfer_stack_type(struct stack_node **source, struct stack_node **dest);
 
-/* Funções de fila */
+/* Funções da lista de parâmetros */
 void insert_params(struct param_list **dest, unsigned int nparams, symbol_type type, symbol_feature feature);
 symbol_feature get_param_feature(struct param_list *p, unsigned int param_no);
 void check_param(struct param_list *p, unsigned int param_no, symbol_type type);
